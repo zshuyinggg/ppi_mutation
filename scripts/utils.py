@@ -23,7 +23,7 @@ def map_stringdb_uniprot():
     ppi_stringdb=pd.read_csv('../data/human_ppi_9606.protein.links.full.v11.5.stringdb.txt',sep=" ")
     dic=dict(zip(f['From'],f['Entry']))
     ppi_uniprot=ppi_stringdb.copy()
-    for i in len(ppi_uniprot):
+    for i in range(len(ppi_uniprot)):
         ppi_uniprot.iloc[i,0]=dic[ppi_stringdb.iloc[i,0]]
         ppi_uniprot.iloc[i,1]=dic[ppi_stringdb.iloc[i,1]]
     ppi_out=ppi_uniprot[['protein1','protein2','experiments','experiments_transferred']]
