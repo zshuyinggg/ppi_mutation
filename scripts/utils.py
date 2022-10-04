@@ -28,5 +28,6 @@ def map_stringdb_uniprot():
         ppi_uniprot.iloc[i,1]=dic[ppi_stringdb.iloc[i,1]]
     ppi_out=ppi_uniprot[['protein1','protein2','experiments','experiments_transferred']]
     print(ppi_out.head())
-    ppi_out.to_csv('ppi_uniprot.csv',index=False)
+    ppi_out.to_csv('../data/ppi_uniprot.csv',index=False)
 
+map_stringdb_uniprot()
