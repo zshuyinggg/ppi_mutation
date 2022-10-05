@@ -1,6 +1,7 @@
 import csv
 import xlrd
 import pandas as pd
+from tqdm import tqdm
 #'../data/human_ppi_9606.protein.links.full.v11.5.stringdb.txt'
 def get_stringdb_id(data):
     # map the returned file at https://www.uniprot.org/tool-dashboard
@@ -24,7 +25,7 @@ def map_stringdb_uniprot():
     dic=dict(zip(f['From'],f['Entry']))
     ppi_uniprot=ppi_stringdb.copy()
     j=0
-    for i in range(len(ppi_uniprot)):
+    for i in tqdm(range(len(ppi_uniprot))):
         if i+j<len(ppi_uniprot):
             try:
                 ppi_uniprot.iloc[i, 0] = dic[ppi_stringdb.iloc[i+j, 0]]
