@@ -25,13 +25,15 @@ def map_stringdb_uniprot():
     ppi_uniprot=ppi_stringdb.copy()
     j=0
     for i in range(len(ppi_uniprot)):
-        try:
-            ppi_uniprot.iloc[i, 0] = dic[ppi_stringdb.iloc[i+j, 0]]
-            ppi_uniprot.iloc[i,1]=dic[ppi_stringdb.iloc[i+j,1]]
-        except(KeyError):
-            # print('%s not found in uniprot '%ppi_stringdb.iloc[i,1])
-            j+=1
-            continue
+        if i+j<len(ppi_uniprot):
+            try:
+                ppi_uniprot.iloc[i, 0] = dic[ppi_stringdb.iloc[i+j, 0]]
+                ppi_uniprot.iloc[i,1]=dic[ppi_stringdb.iloc[i+j,1]]
+            except(KeyError):
+                # print('%s not found in uniprot '%ppi_stringdb.iloc[i,1])
+                j+=1
+                continue
+        else: break
     print('%s rows are deleted'%j)
     ppi_out=ppi_uniprot[['protein1','protein2','experiments','experiments_transferred']]
     print(len(ppi_uniprot))
