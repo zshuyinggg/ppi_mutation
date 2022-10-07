@@ -49,7 +49,7 @@ def map_stringdb_uniprot():
     ppi_out.to_csv('../data/ppi_uniprot.csv',index=False)
 
 def get_clinvar_page(snpid):
-    page=requests.get('https://www.ncbi.nlm.nih.gov/snp/'+string(snpid)).text
+    page=requests.get('https://www.ncbi.nlm.nih.gov/snp/'+str(snpid)).text
     print(page)
 
 
