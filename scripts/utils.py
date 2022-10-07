@@ -2,6 +2,9 @@ import csv
 import xlrd
 import pandas as pd
 from tqdm import tqdm
+import requests
+from bs4 import BeautifulSoup as BS
+
 #'../data/human_ppi_9606.protein.links.full.v11.5.stringdb.txt'
 def get_stringdb_id(data):
     # map the returned file at https://www.uniprot.org/tool-dashboard
@@ -45,4 +48,11 @@ def map_stringdb_uniprot():
     print(ppi_out.head())
     ppi_out.to_csv('../data/ppi_uniprot.csv',index=False)
 
-map_stringdb_uniprot()
+def get_clinvar_page(snpid):
+    page=requests.get('https://www.ncbi.nlm.nih.gov/snp/'+string(snpid)).text
+    print(page)
+
+
+get_clinvar_page('rs3829740')
+
+# map_stringdb_uniprot()
