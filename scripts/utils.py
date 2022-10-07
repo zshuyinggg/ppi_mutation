@@ -52,7 +52,7 @@ def get_clinvar_page(snpid):
     import requests
 
 
-    response = requests.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=clinvar&rettype=vcv&is_variationid&id=14206,41472&from_esearch=true').text
+    response = requests.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=clinvar&rettype=vcv&is_variationid&id=rs3829740&from_esearch=true').text
     # page=requests.get('https://www.ncbi.nlm.nih.gov/snp/'+str(snpid)).text
     # soup=BS(response,'html.parser')
 
