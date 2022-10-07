@@ -50,7 +50,9 @@ def map_stringdb_uniprot():
 
 def get_clinvar_page(snpid):
     page=requests.get('https://www.ncbi.nlm.nih.gov/snp/'+str(snpid)).text
-    print(page)
+    soup=BS(page,'html.parser')
+
+    print(soup.prettify())
 
 
 get_clinvar_page('rs3829740')
