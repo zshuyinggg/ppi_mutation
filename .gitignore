@@ -1,2 +1,6 @@
 /data/*
 .idea/*
+
+!*.py
+!*.ipynb
+!*.md

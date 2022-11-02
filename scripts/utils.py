@@ -3,6 +3,7 @@ import xlrd
 import pandas as pd
 from tqdm import tqdm
 import requests
+import numpy as np
 from bs4 import BeautifulSoup as BS
 
 #'../data/human_ppi_9606.protein.links.full.v11.5.stringdb.txt'
@@ -48,17 +49,33 @@ def map_stringdb_uniprot():
     print(ppi_out.head())
     ppi_out.to_csv('../data/ppi_uniprot.csv',index=False)
 
-def get_clinvar_page(snpid):
-    import requests
+def get_cli_significance(snpid):
+    response = requests.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=snp&rettype=vcv&id=%s&from_esearch=true'%snpid).text
+    soup=BS(response,'xml')
+    clinical_significance=soup.find('CLINICAL_SIGNIFICANCE')
+
+    try:
+        print(clinical_significance.text)
+        return clinical_significance.text
+    except AttributeError:
+        print('snpid',snpid,clinical_significance)
 
 
-    response = requests.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=clinvar&rettype=vcv&is_variationid&id=rs3829740&from_esearch=true').text
-    # page=requests.get('https://www.ncbi.nlm.nih.gov/snp/'+str(snpid)).text
-    # soup=BS(response,'html.parser')
+def add_cli_significance_to_file(file_in,file_out):
+    f=pd.read_csv(file_in)
+    print(f.columns)
+    list_snps=list(set(f.loc[:,'dbSNP_id']))
+    table=pd.DataFrame(columns=['dbSNP_id','clinical_significance'],index=list_snps)
+    table['clinical_significance']=np.zeros((len(table),1))
+    # if table.columns[-1]!='clinical_significance' :
+    #     raise NameError("the last column should be 'clinical_significance'")
+    print(table.head())
+    for i in list_snps:
+        table.loc[i,'clinical_significance']=get_cli_significance(i)
+    table.to_csv(file_out)
 
-    print(response)
-
-
-get_clinvar_page('rs3829740')
-
-# map_stringdb_uniprot()
+get_cli_significance('rs328')
+add_cli_significance_to_file('../data/supplementary2.csv','../data/supplementary2_significance.csv')
+#
+# add_cli_significance_to_file('../data/supplementary3.csv','../data/supplementary3_significance.csv')
+# add_cli_significance_to_file('../data/supplementary4.csv','../data/supplementary4_significance.csv')
