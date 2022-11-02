@@ -1,6 +1,6 @@
 /data/*
 .idea/*
 
-!*.py
-!*.ipynb
-!*.md
+!/data/*.py
+!/data/*.ipynb
+!/data/*.md
