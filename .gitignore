@@ -4,3 +4,14 @@
 !/data/*.py
 !/data/*.ipynb
 !/data/*.md
+
+
+
+!**.py
+!**.ipynb
+!**.md
+
+
+
+
+
