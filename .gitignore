@@ -5,6 +5,7 @@
 !/data/*.ipynb
 !/data/*.md
 
+<<<<<<< HEAD
 
 
 !**.py
@@ -15,3 +16,8 @@
 
 
 ./scripts/path.json
+=======
+!**/*.py
+!**/*.ipynb
+!**/*.md
+>>>>>>> 44bd6a85b04c5161499b1a4436c41bc0e6402dd5
