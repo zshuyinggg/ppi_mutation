@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup as BS
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib_venn import venn3, venn3_circles
+from matplotlib_venn import venn3, venn3_circles,venn3_unweighted
 import json
 import os, sys
 global top_path  # the path of the top_level directory
@@ -163,19 +163,42 @@ def convert_huri_ensembl_2_uniprot(l):
         except KeyError: print('pair name %s found and ignored'%key)
     return values
 
-def generate_set_of_pairs(l1):
+def generate_set_of_pairs(l1,if_self_included):
+    l1=[item for item in l1 if '.' not in item and len(item.split('-'))==2]
+    # l11=[item.split('-')[0] for item in l1 if len(item.split('-'))==2]
+    # l12=[item.split('-')[1] for item in l1 if len(item.split('-'))==2]
+    l_self=[item for item in l1 if (len(item.split('-'))==2) and (item.split('-')[0]==item.split('-')[1])]
+    if '-' in l_self:l_self.remove('-')
+    if '-' in l1:l1.remove('-')
+    l_self_duplicate=[item.split('-')[0]+'_dup_'+item.split('-')[1] for item in l_self] #This is to count the self-interacting pairs
+    l_error=[item for item in l1 if len(item.split('-'))<2]
+    print(l_error)
+    for item in l_error:
+        l1.remove(item)
+    from functools import partial, reduce
+    l1_reverse=[item.split('-')[1]+'-'+item.split('-')[0] for item in l1 if len(item.split('-'))==2]
+    if '-' in l1_reverse:l1_reverse.remove('-')
+
+    set1=set(l1)
+    set1.update(l1_reverse)
+    if if_self_included:
+        set1.update(l_self_duplicate)
+    else:
+        set1=set1-set(l_self)
+    return set1
+
+def get_self_interaction(l1):
     set1=set(l1)
     l11=[item.split('-')[0] for item in l1 if len(item.split('-'))>1]
     l12=[item.split('-')[1] for item in l1 if len(item.split('-'))>1]
-    l_error=[item for item in l1 if len(item.split('-'))<2]
-    print(l_error)
-    from functools import partial, reduce
-    l1_reverse=list(reduce(partial(map, str.__add__), (l12,'-', l11)))
-    set1.update(l1)
-    set1.update(l1_reverse)
-    return set1
-
-def compare_actual_ppi_3_databases(p):
+    l_self=[item for item in l1 if len(item.split('-'))>1 and item.split('-')[0]==item.split('-')[1]]
+    # l_error=[item for item in l1 if len(item.split('-'))<2]
+    # print(l_error)
+    # from functools import partial, reduce
+    # l1_reverse=list(reduce(partial(map, str.__add__), (l12,'-', l11)))
+    # set2=set(l1_reverse)
+    return l_self
+def compare_actual_ppi_3_databases(p,if_self_included):
     """
     Compare screened three databases (Huri and humap i just read their actual used ppi from the directory)
     :param p: the cutoff of confidence of stringdb
@@ -183,10 +206,10 @@ def compare_actual_ppi_3_databases(p):
     """
     huri_dir=os.path.join(data_path,'complexes/HuRI') #Ensembl pairs
     humap_dir=os.path.join(data_path,'complexes/pdb') #uniprot pairs
-    huri_uniprot_pairs=convert_huri_ensembl_2_uniprot(os.listdir(huri_dir)[1:])
-    humap_uniprot_pairs=os.listdir(humap_dir)[1:]
-    huri_uniprot_pairs=generate_set_of_pairs(huri_uniprot_pairs)
-    humap_uniprot_pairs=generate_set_of_pairs(humap_uniprot_pairs)
+    huri_uniprot_pairs=convert_huri_ensembl_2_uniprot([x[0].split('/')[-1] for x in os.walk(huri_dir)])
+    humap_uniprot_pairs=[x[0].split('/')[-1] for x in os.walk(humap_dir)]
+    huri_uniprot_pairs=generate_set_of_pairs(huri_uniprot_pairs,if_self_included)
+    humap_uniprot_pairs=generate_set_of_pairs(humap_uniprot_pairs,if_self_included)
 
     f=pd.read_csv(os.path.join(data_path,'string_ppi_uniprot.csv'))
     print('before screening, StringDB has %s'%len(f))
@@ -204,6 +227,31 @@ def compare_actual_ppi_3_databases(p):
           alpha=0.75)
     # venn3_circles([humap_uniprot_pairs, huri_uniprot_pairs, string_set], lw=0.3)
     plt.show()
+    print(huri_uniprot_pairs.intersection(humap_uniprot_pairs))
+
+def summary_self_interactions(p):
+    """
+    check if any of the pairs are self-self interaction
+    """
+    huri_dir=os.path.join(data_path,'complexes/HuRI') #Ensembl pairs
+    humap_dir=os.path.join(data_path,'complexes/pdb') #uniprot pairs
+    huri_uniprot_pairs=convert_huri_ensembl_2_uniprot(os.listdir(huri_dir)[1:])
+    humap_uniprot_pairs=os.listdir(humap_dir)[1:]
+
+    huri_self_pair_count=len(get_self_interaction(huri_uniprot_pairs))
+    humap_self_pair_count=len(get_self_interaction(humap_uniprot_pairs))
+    f=pd.read_csv(os.path.join(data_path,'string_ppi_uniprot.csv'))
+    print('before screening, StringDB has %s'%len(f))
+    f=f[f.combined_score>=p]
+    print('after screening, StringDB has %s'%len(f))
+
+    f['pair1']=f['protein1']+'-'+f['protein2']
+    f['pair2']=f['protein2']+'-'+f['protein1']
+    string_self_pair_count=sum(f['pair1']==f['pair2'])
+    print('huri self interacting pairs:', huri_self_pair_count)
+    print('humap self interacting pairs:', humap_self_pair_count)
+    print('string self interacting pairs:', string_self_pair_count)
+
 
 def screen_clinvar():
     import allel
@@ -225,4 +273,11 @@ get_cli_significance('rs328')
 # add_cli_significance_to_file('../data/supplementary3.csv','../data/supplementary3_significance.csv')
 # add_cli_significance_to_file('../data/supplementary4.csv','../data/supplementary4_significance.csv')
 
+# %%
+summary_self_interactions(400)
+# %%
+compare_actual_ppi_3_databases(400,True)
+# %%
+
+generate_set_of_pairs(['P25788-P28070', 'Q12824-Q96GM5','P11-P11'])
 # %%

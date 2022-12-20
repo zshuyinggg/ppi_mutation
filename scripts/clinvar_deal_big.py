@@ -1,10 +1,11 @@
 #%%
 from tqdm import tqdm
-import xml.etree.cElementTree as ET
+import xml.etree.ElementTree as ET
 from pandas.errors import ParserError
 # get an iterable
+# file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/ClinVarFullRelease_00-latest.xml'
 file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/ClinVarFullRelease_00-latest.xml'
-out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/organize_clinvar_2.txt'
+out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/organize_clinvar_3.txt'
 # context = ET.iterparse(myfile, events=('start', 'end'))
 
 context = ET.iterparse(file, events=('start', 'end'))
@@ -17,7 +18,6 @@ clinvar_id, review_status, clinical_sig, uniprot_kb, variant_type, hgvs_p, misse
 
 with open(out, 'w') as f_out:
     f_out.write('clinvar_id,review_status,clinical_sig,clinvar_id,uniprot_kb,variant_type,hgvs_p,missense\n')
-    
     try:
         for index, (event, elem) in enumerate(context):
             pbar.update(1)
@@ -31,8 +31,10 @@ with open(out, 'w') as f_out:
                 node = 0
             if event == 'start' and elem.tag == 'ClinVarAccession':
                 clinvar_id = elem.attrib['Acc']
+            # if event == 'end' and elem.tag == 'ReviewStatus' and node and ('reviewed by expert panel' in review_status or ):
             if event == 'end' and elem.tag == 'ReviewStatus' and node:
                 review_status = elem.text
+                if 'no criteria' in elem.text or 'no assertion provided' in elem.text:review_status=0
             if event == 'end' and elem.tag == 'Description' and node:
                 clinical_sig = elem.text
             if event == 'end' and elem.tag == 'XRef' and elem.attrib.get('DB') == 'UniProtKB':
@@ -46,7 +48,7 @@ with open(out, 'w') as f_out:
                     # print (elem.attrib['Type'])
                     # if variant_type!='single nucleotide variant':continue #some SNV are marked as "variation"
                     variant_type = elem.attrib.get('Type')
-                    elem.clear()
+                    # elem.clear()
                 if elem.tag == 'Attribute':
                     if elem.attrib.get('Type') == 'HGVS, protein':
                         # print(elem.text)
@@ -55,23 +57,33 @@ with open(out, 'w') as f_out:
                         missense = elem.text
                         if missense != 'missense variant':
                             elem.clear()
-                            root.clear()
+                            # root.clear()
                             continue
-            if 0 in [clinvar_id, review_status, clinical_sig, variant_type, uniprot_kb,
-                     missense]: 
-                     
+            if event=='end' and elem.tag=='ClinVarSet':
                 elem.clear()
-                root.clear()     
+                root.clear()
+            if 0 in [clinvar_id, review_status, clinical_sig, variant_type, uniprot_kb,hgvs_p,
+                     missense] or None in [clinvar_id, review_status, clinical_sig, variant_type, uniprot_kb,hgvs_p,
+                     missense]: 
+                # print(clinvar_id, review_status, clinical_sig, variant_type, uniprot_kb,
+                #      missense)
+                # elem.clear()
+                # root.clear()     
                 continue  # if the record misses the feature we need then skip it
             try:
-                f_out.write(','.join(
+                f_out.write(';'.join(
                     [clinvar_id, review_status, clinical_sig, uniprot_kb, variant_type, hgvs_p, missense]) + '\n')
+                # print('\nwrote one line\n')
+                clinvar_id, review_status, clinical_sig, uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0, 0
+                
             except TypeError:
                 print([clinvar_id, review_status, clinical_sig, uniprot_kb, variant_type, hgvs_p, missense])
-            elem.clear()
-            root.clear()
+                clinvar_id, review_status, clinical_sig, uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0, 0
+
+
             
-            clinvar_id, review_status, clinical_sig, uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0, 0
         pbar.close()
     except SyntaxError:
         pass
+
+# %%
