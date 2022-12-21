@@ -33,8 +33,8 @@ with open(out, 'w') as f_out:
                 clinvar_id = elem.attrib['Acc']
             # if event == 'end' and elem.tag == 'ReviewStatus' and node and ('reviewed by expert panel' in review_status or ):
             if event == 'end' and elem.tag == 'ReviewStatus' and node:
-                review_status = elem.text
-                if 'no criteria' in elem.text or 'no assertion provided' in elem.text:review_status=0
+                review_status = elem.text 
+                if 'no criteria' in elem.text or 'no assertion provided' in elem.text or 'no assertion criteria' in elem.text:review_status=0
             if event == 'end' and elem.tag == 'Description' and node:
                 clinical_sig = elem.text
             if event == 'end' and elem.tag == 'XRef' and elem.attrib.get('DB') == 'UniProtKB':
@@ -87,3 +87,9 @@ with open(out, 'w') as f_out:
         pass
 
 # %%
+
+
+
+
+# conflicting interpretations
+# uncertain
