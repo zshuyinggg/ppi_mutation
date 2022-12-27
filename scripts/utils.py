@@ -229,6 +229,11 @@ def compare_actual_ppi_3_databases(p,if_self_included):
     plt.show()
     print(huri_uniprot_pairs.intersection(humap_uniprot_pairs))
 
+
+def get_uniprot_ids(list_of_databases):
+    for database in list_of_databases:
+        
+
 def summary_self_interactions(p):
     """
     check if any of the pairs are self-self interaction
