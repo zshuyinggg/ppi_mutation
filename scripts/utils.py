@@ -231,8 +231,61 @@ def compare_actual_ppi_3_databases(p,if_self_included):
 
 
 def get_uniprot_ids(list_of_databases):
+    """list of 'huri' and/or 'humap'
+    """
+    ids=set()
     for database in list_of_databases:
-        
+        print(database)
+        if database=='huri':
+            huri_set=set()
+
+            huri_dir=os.path.join(data_path,'complexes/HuRI') #Ensembl pairs
+            huri_uniprot_pairs=convert_huri_ensembl_2_uniprot([x[0].split('/')[-1] for x in os.walk(huri_dir)])
+            l=[item.split('-') for item in huri_uniprot_pairs if '.' not in item and len(item.split('-'))==2]
+            # print(l)
+            if '-' in l:l.remove('-')
+
+            for item in l:
+
+                huri_set=huri_set.union(set(item))
+            print('huri length:', len(huri_set))
+            
+        elif database=='humap':
+            humap_set=set()
+            humap_dir=os.path.join(data_path,'complexes/pdb') #uniprot pairs
+            humap_uniprot_pairs=[x[0].split('/')[-1] for x in os.walk(humap_dir)]
+            l=[item.split('-') for item in humap_uniprot_pairs if '.' not in item and len(item.split('-'))==2]
+            # print(l)
+            if '-' in l:l.remove('-')
+            for item in l:
+                humap_set=humap_set.union(set(item))
+
+            print('humap length:', len(humap_set))
+
+        else: raise NameError('%s is not a right argument'%list_of_databases)
+    ids=humap_set.union(huri_set)
+    if '' in ids: ids.remove('')
+    return ids
+
+def find_pairs(string):
+    huri_dir=os.path.join(data_path,'complexes/HuRI') #Ensembl pairs
+    humap_dir=os.path.join(data_path,'complexes/pdb') #uniprot pairs
+    huri_uniprot_pairs=convert_huri_ensembl_2_uniprot([x[0].split('/')[-1] for x in os.walk(huri_dir)])
+    humap_uniprot_pairs=[x[0].split('/')[-1] for x in os.walk(humap_dir)]
+    huri_uniprot_pairs=generate_set_of_pairs(huri_uniprot_pairs,1)
+    humap_uniprot_pairs=generate_set_of_pairs(humap_uniprot_pairs,1)
+    for item in huri_uniprot_pairs:
+        if string in item:
+            print('string %s is in huri pair %s'%(string,item))
+    for item in humap_uniprot_pairs:
+        if string in item:
+            print('string %s is in humap pair %s'%(string,item))
+
+
+
+
+def get_sequence_from_uniprot_id(id):
+    pass
 
 def summary_self_interactions(p):
     """
@@ -270,19 +323,19 @@ def screen_clinvar():
 # get_all_uniprot_3_databases()
 # compare_actual_ppi_3_databases(400)
 # get_stringdb_id('../data/9606.protein.physical.links.detailed.v11.5.txt')
-# map_stringdb_uniprot()
-# screen_by_confidence('../data/ppi_uniprot.csv',400)
-get_cli_significance('rs328')
-# add_cli_significance_to_file('../data/supplementary2.csv','../data/supplementary2_significance.csv')
-# #
-# add_cli_significance_to_file('../data/supplementary3.csv','../data/supplementary3_significance.csv')
-# add_cli_significance_to_file('../data/supplementary4.csv','../data/supplementary4_significance.csv')
+# # map_stringdb_uniprot()
+# # screen_by_confidence('../data/ppi_uniprot.csv',400)
+# get_cli_significance('rs328')
+# # add_cli_significance_to_file('../data/supplementary2.csv','../data/supplementary2_significance.csv')
+# # #
+# # add_cli_significance_to_file('../data/supplementary3.csv','../data/supplementary3_significance.csv')
+# # add_cli_significance_to_file('../data/supplementary4.csv','../data/supplementary4_significance.csv')
 
-# %%
-summary_self_interactions(400)
-# %%
-compare_actual_ppi_3_databases(400,True)
-# %%
+# # %%
+# summary_self_interactions(400)
+# # %%
+# compare_actual_ppi_3_databases(400,True)
+# # %%
 
-generate_set_of_pairs(['P25788-P28070', 'Q12824-Q96GM5','P11-P11'])
-# %%
+# generate_set_of_pairs(['P25788-P28070', 'Q12824-Q96GM5','P11-P11'])
+# # %%
