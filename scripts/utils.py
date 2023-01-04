@@ -285,7 +285,8 @@ def find_pairs(string):
 
 
 def get_sequence_from_uniprot_id(id):
-    pass
+    url='https://rest.uniprot.org/uniprotkb/%s.fasta'%id
+    
 
 def summary_self_interactions(p):
     """
@@ -315,6 +316,9 @@ def screen_clinvar():
     import allel
     df = allel.vcf_to_dataframe(os.path.join(data_path,'clinvar','clinvar.vcf'))
     df.head()
+
+
+
 
 
 # import matplotlib
