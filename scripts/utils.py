@@ -4,10 +4,11 @@ import csv
 import xlrd
 import pandas as pd
 from tqdm import tqdm
+import math
 import requests
 import numpy as np
 from bs4 import BeautifulSoup as BS
-
+import re
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -232,6 +233,7 @@ def compare_actual_ppi_3_databases(p,if_self_included):
 
 def get_uniprot_ids(list_of_databases):
     """list of 'huri' and/or 'humap'
+    exclude'sp|Q6ZSR9|YJ005_HUMAN'
     """
     ids=set()
     for database in list_of_databases:
@@ -246,7 +248,7 @@ def get_uniprot_ids(list_of_databases):
             if '-' in l:l.remove('-')
 
             for item in l:
-
+                if '|' in item: continue
                 huri_set=huri_set.union(set(item))
             print('huri length:', len(huri_set))
             
@@ -258,6 +260,7 @@ def get_uniprot_ids(list_of_databases):
             # print(l)
             if '-' in l:l.remove('-')
             for item in l:
+                if '|' in item: continue
                 humap_set=humap_set.union(set(item))
 
             print('humap length:', len(humap_set))
@@ -286,7 +289,51 @@ def find_pairs(string):
 
 def get_sequence_from_uniprot_id(id):
     url='https://rest.uniprot.org/uniprotkb/%s.fasta'%id
+    contnt = requests.get(url).text
+    splt=contnt.split('\n')
+    seq=''.join(splt[1:])
     
+    return seq
+
+
+def gen_sequences_batch(list_of_ids,batch_size,out_file):
+    """
+    {'seq_id': 'protein_seq_1'
+
+ 'seq_primary': 'VQLVQSGAAVKKPGESLRISCKGSGYIFTNYWINWVRQMPGRGLEWMGRIDPSDSYTNYSSSFQGHVTISADKSISTVYLQWRSLKDTDTAMYYCARLGSTA'}
+    """
+    total=len(list_of_ids)
+    n_f=math.ceil(total//batch_size)
+    print(n_f)
+    pbar1 = tqdm(total=n_f, position=1)
+    for i in tqdm(range(74,n_f-1)):
+        list_for_file=[]    
+        temp_dic=dict()
+        pbar2 = tqdm(total=batch_size, position=0)
+        for id in tqdm(list_of_ids[i*batch_size:(i+1)*batch_size]):
+            temp_dic=dict()
+            temp_dic['seq_primary']=get_sequence_from_uniprot_id(str(id))
+            temp_dic['seq_id']=str(id)
+            if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
+            pbar2.update(1)
+            del temp_dic
+        with open('%s_%d.json'%(out_file,i),'w') as f:
+            json.dump(list_for_file,f)
+            del list_for_file
+        pbar1.update(1)
+
+    list_for_file=[]    
+    temp_dic=dict()  
+    for id in list_of_ids[(n_f-1)*batch_size:]:
+        temp_dic=dict()  
+        temp_dic['seq_primary']=get_sequence_from_uniprot_id(str(id))
+        temp_dic['seq_id']=str(id)
+        if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
+        del temp_dic
+    pbar1.update(1)
+
+    with open('%s_%d.json'%(out_file,n_f-1),'w') as f:
+        json.dump(list_for_file,f)
 
 def summary_self_interactions(p):
     """
