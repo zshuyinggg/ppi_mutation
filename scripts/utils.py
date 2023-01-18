@@ -306,7 +306,7 @@ def gen_sequences_batch(list_of_ids,batch_size,out_file):
     n_f=math.ceil(total//batch_size)
     print(n_f)
     pbar1 = tqdm(total=n_f, position=1)
-    for i in tqdm(range(74,n_f-1)):
+    for i in tqdm(range(n_f-1)):
         list_for_file=[]    
         temp_dic=dict()
         pbar2 = tqdm(total=batch_size, position=0)
