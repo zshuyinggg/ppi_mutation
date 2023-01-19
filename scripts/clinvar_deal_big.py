@@ -6,7 +6,7 @@ from pandas.errors import ParserError
 file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/ClinVarFullRelease_00-latest.xml'
 # file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example_11692285_11793688.xml'
 # file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example.xml'
-out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/dec24.txt'
+out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/Jan 18.txt'
 # context = ET.iterparse(myfile, events=('start', 'end'))
 
 context = ET.iterparse(file, events=('start', 'end'))
@@ -14,8 +14,8 @@ context = ET.iterparse(file, events=('start', 'end'))
 node = 0
 node_measure = 0
 pbar = tqdm(total=422796074)
-clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0
-l=[clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense]
+clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0,0
+l=[clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense]
 
 with open(out, 'w') as f_out:
     f_out.write('clinvar_id,review_status,clinical_sig,clinvar_id,uniprot_kb,variant_type,hgvs_p,missense\n')
@@ -33,7 +33,7 @@ with open(out, 'w') as f_out:
                 if event == 'start' and elem.tag == 'ClinVarAccession':
                     clinvar_id = elem.attrib['Acc']
                 # if event == 'end' and elem.tag == 'ReviewStatus' and node and ('reviewed by expert panel' in review_status or ):
-                if event == 'end' and elem.tag == 'ReviewStatus' and node:
+                if event == 'end' and elem.tag == 'ReviewStatus' and node and review_status==0: #only update once to obtain the latest value.
                     review_status = elem.text 
                     if 'no criteria' in elem.text or 'no assertion provided' in elem.text or 'no assertion criteria' in elem.text:review_status=0
                 if event == 'end' and elem.tag == 'Description' and node:
@@ -65,23 +65,23 @@ with open(out, 'w') as f_out:
                     elem.clear()
                     root.clear()
 
-                    if 0 in [clinvar_id, review_status, clinical_sig, variant_type,hgvs_p,
-                            missense] or None in [clinvar_id, review_status, clinical_sig, variant_type,hgvs_p,
+                    if 0 in [clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type,hgvs_p,
+                            missense] or None in [clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type,hgvs_p,
                             missense]: 
-                        clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0
+                        clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0,0
                         
                         continue  # 
                     try:
-                        # print(clinvar_id, review_status, clinical_sig, variant_type,hgvs_p,
+                        # print(clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type,hgvs_p,
                     #     missense)
                         f_out.write(';'.join(
-                            [clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense]) + '\n')
+                            [clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense]) + '\n')
                         # print('\nwrote one line\n')
-                        clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0
+                        clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0,0
                     
                     except TypeError:
-                        print('ERROR:',[clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense])
-                        clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense = 0,  0, 0, 0, 0, 0
+                        print('ERROR:',[clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense])
+                        clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0,  0, 0, 0, 0, 0
 
                 
             pbar.close()
@@ -94,18 +94,6 @@ with open(out, 'w') as f_out:
 
 
 
-# conflicting interpretations
-# uncertain
-context = ET.iterparse(file, events=('start', 'end'))
-
-node = 0
-node_measure = 0
-pbar = tqdm(total=422796074)
-clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0
-
-
-with open(out, 'w') as f_out:
-    f_out.write('clinvar_id,review_status,clinical_sig,clinvar_id,uniprot_kb,variant_type,hgvs_p,missense\n')
 
 
 # %%

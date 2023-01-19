@@ -335,6 +335,56 @@ def gen_sequences_batch(list_of_ids,batch_size,out_file):
     with open('%s_%d.json'%(out_file,n_f-1),'w') as f:
         json.dump(list_for_file,f)
 
+
+def modify(seq,hgvs):
+    #TODO
+    pass
+
+
+def gen_mutants_batch(list_of_ids,list_of_hgvs,batch_size,out_file):
+    """
+    {'seq_id': 'protein_seq_1'
+
+ 'seq_primary': 'VQLVQSGAAVKKPGESLRISCKGSGYIFTNYWINWVRQMPGRGLEWMGRIDPSDSYTNYSSSFQGHVTISADKSISTVYLQWRSLKDTDTAMYYCARLGSTA'}
+    """
+    total=len(list_of_ids)
+    n_f=math.ceil(total//batch_size)
+    print(n_f)
+    pbar1 = tqdm(total=n_f, position=1)
+    for i in tqdm(range(n_f-1)):
+        list_for_file=[]    
+        temp_dic=dict()
+        pbar2 = tqdm(total=batch_size, position=0)
+        for id in tqdm(list_of_ids[i*batch_size:(i+1)*batch_size]):
+            temp_dic=dict()
+            temp_dic['seq_primary']=modify(get_sequence_from_uniprot_id(str(id)),hgvs)#TODO 
+          
+            temp_dic['seq_id']=str(id)
+            if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
+            pbar2.update(1)
+            del temp_dic
+        with open('%s_%d.json'%(out_file,i),'w') as f:
+            json.dump(list_for_file,f)
+            del list_for_file
+        pbar1.update(1)
+
+
+
+
+    list_for_file=[]    
+    temp_dic=dict()  
+    for id in list_of_ids[(n_f-1)*batch_size:]:
+        temp_dic=dict()  
+        temp_dic['seq_primary']=get_sequence_from_uniprot_id(str(id))
+        temp_dic['seq_id']=str(id)
+        if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
+        del temp_dic
+    pbar1.update(1)
+
+    with open('%s_%d.json'%(out_file,n_f-1),'w') as f:
+        json.dump(list_for_file,f)
+
+
 def summary_self_interactions(p):
     """
     check if any of the pairs are self-self interaction

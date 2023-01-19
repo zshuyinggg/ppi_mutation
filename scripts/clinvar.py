@@ -182,21 +182,21 @@ def get_uniprot_variant_summary(snpid):
     # clinical_importance=get_cli_significance(snpid)
 
 
-# %%
-# %%
-get_uniprotid_from_refseq('NP_000228.1')
-# %%
-convert_txt_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/variant_summary.txt',
-                '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/variant_summary_indents.txt')
-# %%
-
-# too big to query
-convert_txt_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/hgvs4variation.txt',
-                '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/hgvs4variation_indents.txt')
-# %%
-
-import numpy as np
-
-variants = np.loadtxt('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/hgvs4variation_indents.txt',
-                      delimiter='\t', dtype=str)
-# %%
+# # %%
+# # %%
+# get_uniprotid_from_refseq('NP_000228.1')
+# # %%
+# convert_txt_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/variant_summary.txt',
+#                 '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/variant_summary_indents.txt')
+# # %%
+#
+# # too big to query
+# convert_txt_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/hgvs4variation.txt',
+#                 '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/hgvs4variation_indents.txt')
+# # %%
+#
+# import numpy as np
+#
+# variants = np.loadtxt('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/hgvs4variation_indents.txt',
+#                       delimiter='\t', dtype=str)
+# # %%
