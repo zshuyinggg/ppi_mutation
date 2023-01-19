@@ -1,6 +1,6 @@
 #!/bin/bash 
 #SBATCH --export=NONE                #Do not propagate environment
-#SBATCH --get-user-ev=L             #Replicate login environment
+#SBATCH --get-user-env=L             #Replicate login environment
 #SBATCH --job-name=clinvar
 #SBATCH --ntasks=1
 #SBATCH --mail-type=ALL
