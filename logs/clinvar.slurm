@@ -11,13 +11,12 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=24
 
-module restore dl
+module restore shuying
 
-source /sw/eb/sw/Anaconda3/2021.11/etc/profile.d/conda.sh
-conda activate shuying
+source /sw/eb/sw/Anaconda3/2021.05/etc/profile.d/conda.sh
 python --version
 cd $SCRATCH/ppi_mutation/scripts
 
-srun --export=ALL python scripts/clinvar_deal_big.py
+srun --export=ALL python /scratch/user/zshuying/ppi_mutation/scripts/clinvar_deal_big.py
 
 
