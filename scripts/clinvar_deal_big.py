@@ -4,9 +4,9 @@ import xml.etree.ElementTree as ET
 from pandas.errors import ParserError
 # get an iterable
 file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/ClinVarFullRelease_00-latest.xml'
-# file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example_11692285_11793688.xml'
+# file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example_382601019_382604019.xml'
 # file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example.xml'
-out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/Jan 18.txt'
+out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/Jan19.txt'
 # context = ET.iterparse(myfile, events=('start', 'end'))
 
 context = ET.iterparse(file, events=('start', 'end'))
@@ -33,10 +33,10 @@ with open(out, 'w') as f_out:
                 if event == 'start' and elem.tag == 'ClinVarAccession':
                     clinvar_id = elem.attrib['Acc']
                 # if event == 'end' and elem.tag == 'ReviewStatus' and node and ('reviewed by expert panel' in review_status or ):
-                if event == 'end' and elem.tag == 'ReviewStatus' and node and review_status==0: #only update once to obtain the latest value.
+                if event == 'end' and elem.tag == 'ReviewStatus' and node : #only update once to obtain the latest value.
                     review_status = elem.text 
                     if 'no criteria' in elem.text or 'no assertion provided' in elem.text or 'no assertion criteria' in elem.text:review_status=0
-                if event == 'end' and elem.tag == 'Description' and node:
+                if event == 'end' and elem.tag == 'Description' and node and clinical_sig==0:
                     clinical_sig = elem.text
                 if event == 'end' and elem.tag == 'XRef' and elem.attrib.get('DB') == 'UniProtKB':
                     uniprot_kb = elem.attrib.get('ID')
@@ -51,7 +51,7 @@ with open(out, 'w') as f_out:
                         variant_type = elem.attrib.get('Type')
                         # elem.clear()
                     if elem.tag == 'Attribute':
-                        if 'HGVS, protein' in elem.attrib.get('Type'):
+                        if 'HGVS, protein' == elem.attrib.get('Type'):
                             # print(elem.text)
                             hgvs_p = elem.text
                         if elem.attrib.get('Type') == 'MolecularConsequence':

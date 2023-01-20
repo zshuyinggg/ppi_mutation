@@ -10,6 +10,7 @@ import numpy as np
 from bs4 import BeautifulSoup as BS
 import re
 import pandas as pd
+from Bio.SeqUtils import seq1
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn3, venn3_circles,venn3_unweighted
@@ -292,9 +293,9 @@ def get_sequence_from_uniprot_id(id):
     contnt = requests.get(url).text
     splt=contnt.split('\n')
     seq=''.join(splt[1:])
-    
-    return seq
-
+    if seq.isupper() and seq:
+        return seq
+    else: return None
 
 def gen_sequences_batch(list_of_ids,batch_size,out_file):
     """
@@ -314,7 +315,7 @@ def gen_sequences_batch(list_of_ids,batch_size,out_file):
             temp_dic=dict()
             temp_dic['seq_primary']=get_sequence_from_uniprot_id(str(id))
             temp_dic['seq_id']=str(id)
-            if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
+            if temp_dic['seq_primary']:list_for_file.append(temp_dic)
             pbar2.update(1)
             del temp_dic
         with open('%s_%d.json'%(out_file,i),'w') as f:
@@ -328,7 +329,7 @@ def gen_sequences_batch(list_of_ids,batch_size,out_file):
         temp_dic=dict()  
         temp_dic['seq_primary']=get_sequence_from_uniprot_id(str(id))
         temp_dic['seq_id']=str(id)
-        if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
+        if temp_dic['seq_primary']:list_for_file.append(temp_dic)
         del temp_dic
     pbar1.update(1)
 
@@ -337,8 +338,26 @@ def gen_sequences_batch(list_of_ids,batch_size,out_file):
 
 
 def modify(seq,hgvs):
-    #TODO
-    pass
+    #NP_000240.1:p.Ile219Val
+    change=hgvs.split('p.')[1]
+    obj=re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)',change)
+    ori,pos,aft=obj.group(1),int(obj.group(2)),obj.group(3)
+    ori=seq1(ori)
+    aft=seq1(aft) 
+    try:assert ori==seq[pos-1]
+    except AssertionError or IndexError:
+        print(hgvs)
+        print ('ori=%s'%ori, seq[pos-1:pos+1])
+        raise AssertionError
+
+    new_seq=seq[:pos-1] + aft + seq[pos:]
+    try:assert new_seq[pos-1]==aft
+
+    except AssertionError:
+        print(hgvs)
+        print ('ori=%s'%ori, seq[pos-1:pos+1])
+        raise AssertionError
+    return new_seq
 
 
 def gen_mutants_batch(list_of_ids,list_of_hgvs,batch_size,out_file):
@@ -349,17 +368,18 @@ def gen_mutants_batch(list_of_ids,list_of_hgvs,batch_size,out_file):
     """
     total=len(list_of_ids)
     n_f=math.ceil(total//batch_size)
-    print(n_f)
     pbar1 = tqdm(total=n_f, position=1)
     for i in tqdm(range(n_f-1)):
         list_for_file=[]    
         temp_dic=dict()
         pbar2 = tqdm(total=batch_size, position=0)
-        for id in tqdm(list_of_ids[i*batch_size:(i+1)*batch_size]):
+        for j,id in enumerate(tqdm(list_of_ids[i*batch_size:(i+1)*batch_size])):
             temp_dic=dict()
-            temp_dic['seq_primary']=modify(get_sequence_from_uniprot_id(str(id)),hgvs)#TODO 
-          
-            temp_dic['seq_id']=str(id)
+            seq=get_sequence_from_uniprot_id(str(id))
+            if seq:
+                temp_dic['seq_primary']=modify(seq,list_of_hgvs[j]) 
+            else: continue
+            temp_dic['seq_id']=list_of_hgvs[j]
             if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
             pbar2.update(1)
             del temp_dic
@@ -373,10 +393,13 @@ def gen_mutants_batch(list_of_ids,list_of_hgvs,batch_size,out_file):
 
     list_for_file=[]    
     temp_dic=dict()  
-    for id in list_of_ids[(n_f-1)*batch_size:]:
+    for j,id in enumerate(list_of_ids[(n_f-1)*batch_size:]):
         temp_dic=dict()  
-        temp_dic['seq_primary']=get_sequence_from_uniprot_id(str(id))
-        temp_dic['seq_id']=str(id)
+        seq=get_sequence_from_uniprot_id(str(id))
+        if seq:
+            temp_dic['seq_primary']=modify(seq,list_of_hgvs[j]) 
+        else: continue
+        temp_dic['seq_id']=list_of_hgvs[j]
         if temp_dic['seq_primary'].isupper():list_for_file.append(temp_dic)
         del temp_dic
     pbar1.update(1)
