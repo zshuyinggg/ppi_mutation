@@ -11,11 +11,8 @@ try:
     APEX_FOUND = True
 except ImportError:
     APEX_FOUND = False
-
 import os
 print(os.environ['CONDA_DEFAULT_ENV'])
-
-
 import datasets, metrics, training
 from models import modeling_pt_bert, modeling_pt_modality
 import utils
