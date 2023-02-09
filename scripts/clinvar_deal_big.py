@@ -2,20 +2,33 @@
 from tqdm import tqdm
 import xml.etree.ElementTree as ET
 from pandas.errors import ParserError
-# get an iterable
+import argparse
+
+
+parser = argparse.ArgumentParser(description='Option to process clinvar data')
+parser.add_argument('--must_uniprotID', type=bool,default=True)
+parser.add_argument('--output_file_name',type=str,required=True,help='eg:test.txt')
+
+args = parser.parse_args()
+must_uniprotID=args.must_uniprotID
+
+
 file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/ClinVarFullRelease_00-latest.xml'
 # file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example_382601019_382604019.xml'
 # file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example.xml'
-out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/Jan19.txt'
-# context = ET.iterparse(myfile, events=('start', 'end'))
+out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/'+args.output_file_name
 
 context = ET.iterparse(file, events=('start', 'end'))
 
 node = 0
 node_measure = 0
 pbar = tqdm(total=422796074)
-clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0,0
-l=[clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense]
+clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense=0,0,0,0,0,0,0
+if must_uniprotID:
+    l=[clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense]
+else:
+    l=[clinvar_id, review_status, clinical_sig, variant_type, hgvs_p, missense]
+
 
 with open(out, 'w') as f_out:
     f_out.write('clinvar_id,review_status,clinical_sig,clinvar_id,uniprot_kb,variant_type,hgvs_p,missense\n')
@@ -64,13 +77,12 @@ with open(out, 'w') as f_out:
                 if event=='end' and elem.tag=='ClinVarSet':
                     elem.clear()
                     root.clear()
-
-                    if 0 in [clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type,hgvs_p,
-                            missense] or None in [clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type,hgvs_p,
-                            missense]: 
+                    # print(l)
+                    if (0 in l) or (None in l): 
                         clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0, 0, 0, 0, 0, 0,0
                         
                         continue  # 
+                    # print('0 and None not in l')
                     try:
                         # print(clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type,hgvs_p,
                     #     missense)
@@ -81,7 +93,7 @@ with open(out, 'w') as f_out:
                     
                     except TypeError:
                         print('ERROR:',[clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense])
-                        clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0,  0, 0, 0, 0, 0
+                        clinvar_id, review_status, clinical_sig,uniprot_kb, variant_type, hgvs_p, missense = 0,  0, 0, 0, 0, 0,0
 
                 
             pbar.close()
