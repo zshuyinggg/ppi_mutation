@@ -302,6 +302,19 @@ def get_sequence_from_uniprot_id(id):
         return seq
     else: return None
 
+
+def gen_sequences_oneFile(list_of_ids,batch_size,out_file):
+    total=len(list_of_ids)
+    seq_dict={}
+    for i,id in enumerate(tqdm(list_of_ids)):
+        seq=get_sequence_from_uniprot_id(str(id))
+        if seq:seq_dict[str(id)]=seq
+        else:continue
+    with open('%s.txt'%(out_file),'w') as f:
+        f.writelines(str(seq_dict))
+    return '%s.txt'%(out_file)
+
+
 def gen_sequences_batch(list_of_ids,batch_size,out_file):
     """
     {'seq_id': 'protein_seq_1'
@@ -365,6 +378,18 @@ def modify(seq,hgvs):
     return new_seq
 
 
+def gen_mutants_oneFile(list_of_ids,list_of_hgvs,out_file,format='dict'):
+    total=len(list_of_ids)
+    seq_dict={}
+    for i,id in enumerate(tqdm(list_of_ids)):
+        seq=get_sequence_from_uniprot_id(str(id))
+        if seq:seq_dict[str(id)]=modify(seq,list_of_hgvs[i])
+        else:continue
+        
+    with open('%s.txt'%(out_file),'w') as f:
+        f.writelines(str(seq_dict))
+    return '%s.txt'%(out_file)
+
 def gen_mutants_batch(list_of_ids,list_of_hgvs,batch_size,out_file):
     """
     {'seq_id': 'protein_seq_1'
@@ -411,6 +436,75 @@ def gen_mutants_batch(list_of_ids,list_of_hgvs,batch_size,out_file):
 
     with open('%s_%d.json'%(out_file,n_f-1),'w') as f:
         json.dump(list_for_file,f)
+    
+
+def check_sep_clinvar(ifuniprot,in_file,out_file):
+    """
+    I used ';' as sep to store the processed clinvar data from fullreleaseXML file, however, there is a column which has ';' itself. This function is to avoid mis-sep.
+    """
+    if 'sep' in in_file: 
+        print('this file has already dealt with separation issue')
+        return True
+    if ifuniprot:cut_num=6
+    else:cut_num=5
+    with open(in_file,'r') as f:
+        with open(out_file,'w') as f_out:
+            line=f.readline()
+            f_out.write('clinvar_id;review_status;clinical_sig;uniprot_kb;variant_type;hgvs_p;missense\n')
+            while True:
+                line=f.readline()
+
+                if line.count(';')>cut_num:
+                    discard_num=line.count(';')-cut_num+3
+                    line_new=';'.join(line.split(';')[:3]+line.split(';')[discard_num:])
+                    print(set(line.split(';'))-set(line_new.split(';')),' is discarded')
+                    f_out.write(line_new)
+                else:
+                    f_out.write(line)
+                if not line:break
+    print('Processed this file to avoid separation issue with ;  and saved as %s'%out_file)
+
+
+def get_uniprot(uniprot_kb_list):
+    return [item.split('#')[0] for item in uniprot_kb_list]
+
+def gen_mutants(clinvar_file,out_file,bs=1280):
+    df=pd.read_csv(clinvar_file,delimiter=';')
+    uniprot_ls=get_uniprot(df['uniprot_kb']) 
+    hgvs_ls=df['hgvs_p'].tolist()
+    if bs:
+        seq_file=gen_mutants_batch(uniprot_ls,hgvs_ls,bs,out_file)
+    else:
+        seq_file=gen_mutants_oneFile(uniprot_ls,hgvs_ls,out_file)
+        return seq_file
+
+def if_positive_or_negative(string_list):
+    label=[]
+    for string in string_list:
+        if string in ['Pathogenic', 
+                    'Pathogenic/Likely pathogenic', 
+                    'probable-pathogenic',
+                    'Likely pathogenic', 
+                    'pathologic', 
+                    'pathogenic',
+                    'likely pathogenic',
+                    'Pathogenic/Likely pathogenic/Established risk allele',
+                    'likely pathogenic - adrenal pheochromocytoma',
+                    'Pathogenic/Pathogenic, low penetrance',
+                    'Pathogenic, low penetrance']:
+            label.append(1)
+        elif string in ['Benign',
+                    'Likely benign',
+                    'Likely Benign',
+                    'Benign/Likely benign',
+                    'non-pathogenic', 
+                    'benign', 'probable-non-pathogenic', 'Likely Benign', 'probably not pathogenic',
+        ]:
+            label.append(-1)
+
+        else: label.append(0)
+    return label
+
 
 
 def summary_self_interactions(p):
