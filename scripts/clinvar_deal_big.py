@@ -13,7 +13,7 @@ args = parser.parse_args()
 must_uniprotID=args.must_uniprotID
 
 
-file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/ClinVarFullRelease_00-latest.xml'
+file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/ClinVarFullRelease_2021-06.xml'
 # file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example_382601019_382604019.xml'
 # file = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/example.xml'
 out = '/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/'+args.output_file_name

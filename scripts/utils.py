@@ -245,12 +245,14 @@ def get_uniprot_ids(list_of_databases):
             huri_dir=os.path.join(data_path,'complexes/HuRI') #Ensembl pairs
             huri_uniprot_pairs=convert_huri_ensembl_2_uniprot([x[0].split('/')[-1] for x in os.walk(huri_dir)])
             l=[item.split('-') for item in huri_uniprot_pairs if '.' not in item and len(item.split('-'))==2]
-            # print(l)
             if '-' in l:l.remove('-')
 
             for item in l:
-                if '|' in item: continue
-                huri_set=huri_set.union(set(item))
+                if '|' in item[0] or '|' in item[1]: 
+                    print('item %s found'%item)
+                    continue
+                else:
+                    huri_set=huri_set.union(set(item))
             print('huri length:', len(huri_set))
             
         elif database=='humap':
@@ -261,8 +263,11 @@ def get_uniprot_ids(list_of_databases):
             # print(l)
             if '-' in l:l.remove('-')
             for item in l:
-                if '|' in item: continue
-                humap_set=humap_set.union(set(item))
+                if '|' in item[0] or '|' in item[1]: 
+                    print('item %s found'%item)
+                    continue
+                else:
+                    humap_set=humap_set.union(set(item))
 
             print('humap length:', len(humap_set))
 
