@@ -24,7 +24,7 @@ class ProteinSequence(Dataset):
         self.tokenizer=tokenizer
         self.label=label
         self.all_uniprot_id_file=all_uniprot_id_file
-        self.positive_sequence_file, self.negative_sequence_file, self.wild_sequences=self.gen_sequence_file (label)
+        self.gen_sequence_file(label)
 
     def gen_sequence_file(self,label):
         self.clinvar['label']=if_positive_or_negative(self.clinvar['clinical_sig'])
@@ -36,7 +36,7 @@ class ProteinSequence(Dataset):
         self.positive_sequences=gen_mutants(self.positive_data,self.gen_dir+'positive',bs=None)
         self.negative_sequences=gen_mutants(self.negative_data,self.gen_dir+'negative',bs=None)
         self.wild_sequences=gen_sequences_oneFile(list(self.wild_uniprotIDs),self.gen_dir+'wild')
-        return self.positive_sequences,self.negative_sequences,self.wild_sequences
+        # return self.positive_sequences,self.negative_sequences,self.wild_sequences
     
     def __len__(self):
         return len(self.clinvar.index)
@@ -44,8 +44,17 @@ class ProteinSequence(Dataset):
     def __getitem__(self, idx, uniprot=None, label=None):
         if torch.is_tensor(idx):
             idx=idx.tolist()
-    
-
+        if not uniprot:
+            if label==1: #all positive
+                sequences_uniprotIDs=self.positive_uniprotIDs[idx]
+                sequences=[' '.join(self.positive_sequences[x]) for x in sequences_uniprotIDs]
+            elif label==-1:#all negative
+                sequences_uniprotIDs=self.negative_uniprotIDs[idx]
+                sequences=[' '.join(self.negative_sequences[x]) for x in sequences_uniprotIDs]                
+            elif label==0:#all wildtype
+                sequences_uniprotIDs=self.wild_uniprotIDs[idx]
+                sequences=[' '.join(self.wild_sequences[x]) for x in sequences_uniprotIDs]
+        
 
 def check_if_in_ppi(uniprotID):
     f_path=os.path.join(top_path,'data/single_protein_seq/uniprotids_humap_huri.txt')

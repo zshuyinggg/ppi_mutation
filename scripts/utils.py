@@ -312,7 +312,7 @@ def gen_sequences_oneFile(list_of_ids,batch_size,out_file):
         else:continue
     with open('%s.txt'%(out_file),'w') as f:
         f.writelines(str(seq_dict))
-    return '%s.txt'%(out_file)
+    return seq_dict
 
 
 def gen_sequences_batch(list_of_ids,batch_size,out_file):
@@ -388,7 +388,7 @@ def gen_mutants_oneFile(list_of_ids,list_of_hgvs,out_file,format='dict'):
         
     with open('%s.txt'%(out_file),'w') as f:
         f.writelines(str(seq_dict))
-    return '%s.txt'%(out_file)
+    return seq_dict
 
 def gen_mutants_batch(list_of_ids,list_of_hgvs,batch_size,out_file):
     """
