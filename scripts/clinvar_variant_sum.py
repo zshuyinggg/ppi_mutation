@@ -5,7 +5,7 @@ import sys
 from utils import *
 
 import pandas as pd
-f=pd.read_csv(os.path.join(data_dir,'clinvar','variant_summary.txt'),sep='\t')
+f=pd.read_csv(os.path.join(data_path,'clinvar','variant_summary.txt'),sep='\t')
 def if_positive_or_negative(string_list):
     label=[]
     for string in string_list:
