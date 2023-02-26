@@ -3,7 +3,7 @@ import multiprocessing
 
 
 import pandas as pd
-f=pd.read_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/variant_summary.txt',sep='\t')
+f=pd.read_csv('../data/clinvar/variant_summary.txt',sep='\t')
 def if_positive_or_negative(string_list):
     label=[]
     for string in string_list:
