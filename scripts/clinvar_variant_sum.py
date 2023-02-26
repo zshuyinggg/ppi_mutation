@@ -1,9 +1,11 @@
 from tqdm import tqdm
 import multiprocessing
-
+from os import path
+import sys
+from utils import *
 
 import pandas as pd
-f=pd.read_csv('../data/clinvar/variant_summary.txt',sep='\t')
+f=pd.read_csv(os.join(data_dir,'clinvar','variant_summary.txt'),sep='\t')
 def if_positive_or_negative(string_list):
     label=[]
     for string in string_list:
@@ -59,6 +61,7 @@ def get_uniprot_from_name(name):
 
 
 f['label']=if_positive_or_negative(f['ClinicalSignificance'])
+
 keep_cols=['#AlleleID', 'Type', 'Name','label', 'ClinicalSignificance', 'ClinSigSimple', 'ReviewStatus', 'OtherIDs', 'LastEvaluated', 'RS# (dbSNP)',
        'nsv/esv (dbVar)', 'RCVaccession']
 keep_conditions=(f['Type']=='single nucleotide variant') &\
@@ -66,7 +69,9 @@ keep_conditions=(f['Type']=='single nucleotide variant') &\
                (['p' in item for item in f['Name'].tolist()]) &\
                (f['label']!=0)
 f_simple=f[keep_conditions][keep_cols]
-f_simple.head()
+f_simple=f_simple.drop_duplicates(subset=['#AlleleID'])
+
+# f_simple.head()
 
 
 num_processes = multiprocessing.cpu_count()
@@ -80,6 +85,13 @@ def func(df):
     for idx in df.index:
         if 'UniProt' not in df.loc[idx,'OtherIDs']:
                 df.loc[idx,'UniPort']=get_uniprot_from_name(f_simple.loc[idx,'Name'])
+        if idx%1000==0: 
+            print ('\n\n\n\n %d completed \n\n\n\n'%idx)
+            pbar.update(1000)
+            df.to_csv('variant_idx_%s'%idx)
     return df
 pool = multiprocessing.Pool(processes=num_processes)
-result =list(tqdm(pool.imap(func, chunks),total=len(chunk_size)))
+result =pool.map(func, chunks)
+f_final=pd.concat(result,sort=False)
+f_final.to_csv('variant_sum_uniprot.csv')
+print(f_final)
