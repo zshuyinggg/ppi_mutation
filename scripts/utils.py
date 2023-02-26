@@ -17,7 +17,7 @@ from matplotlib_venn import venn3, venn3_circles,venn3_unweighted
 import json
 import os, sys
 global top_path  # the path of the top_level directory
-global data_dir, script_dir, logging_dir
+global script_path, data_path, logging_path
 # add the top-level directory of this project to sys.path so that we can import modules without error
 
 top_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
