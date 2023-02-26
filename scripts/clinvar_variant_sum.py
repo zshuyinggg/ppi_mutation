@@ -82,13 +82,14 @@ pbar = tqdm(total=len(f_simple))
 f_simple['UniPort']=[0]*len(f_simple)
 chunks = [f_simple.loc[f_simple.index[i:i + chunk_size]] for i in range(0, f_simple.shape[0], chunk_size)]
 def func(df):
-    for idx in df.index:
+    mark=df.index[0]
+    for j,idx in enumerate(df.index):
         if 'UniProt' not in df.loc[idx,'OtherIDs']:
                 df.loc[idx,'UniPort']=get_uniprot_from_name(f_simple.loc[idx,'Name'])
-        if idx%1000==0: 
+        if j%1000==0: 
             print ('\n\n\n\n %d completed \n\n\n\n'%idx)
             pbar.update(1000)
-            df.to_csv('variant_idx_%s'%idx)
+            df.to_csv('variant_proc_%s_%s_finished.csv'%(mark,j))
     return df
 pool = multiprocessing.Pool(processes=num_processes)
 result =pool.map(func, chunks)
