@@ -5,7 +5,8 @@ import sys
 from utils import *
 
 import pandas as pd
-f=pd.read_csv(os.path.join(data_path,'clinvar','variant_summary.txt'),sep='\t')
+f=pd.read_csv(os.path.join(data_path,'clinvar','variant_summary_2022-02.txt'),sep='\t')
+# f_simple=pd.read_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/2022-02-variant-sum_remain.csv',index_col='#AlleleID')
 def if_positive_or_negative(string_list):
     label=[]
     for string in string_list:
@@ -71,7 +72,7 @@ keep_conditions=(f['Type']=='single nucleotide variant') &\
 f_simple=f[keep_conditions][keep_cols]
 f_simple=f_simple.drop_duplicates(subset=['#AlleleID'])
 
-# f_simple.head()
+f_simple.head()
 
 
 num_processes = multiprocessing.cpu_count()
@@ -83,16 +84,17 @@ f_simple['UniPort']=[0]*len(f_simple)
 chunks = [f_simple.loc[f_simple.index[i:i + chunk_size]] for i in range(0, f_simple.shape[0], chunk_size)]
 def func(df):
     mark=df.index[0]
+    print('process %s starts....'%mark)
     for j,idx in enumerate(df.index):
         if 'UniProt' not in df.loc[idx,'OtherIDs']:
                 df.loc[idx,'UniPort']=get_uniprot_from_name(f_simple.loc[idx,'Name'])
-        if j%1000==0: 
-            print ('\n\n\n\n %d completed \n\n\n\n'%idx)
-            pbar.update(1000)
-            df.to_csv('variant_proc_%s_%s_finished.csv'%(mark,j))
+        if j%100==0: 
+            print ('\n\n\n\n %d completed \n\n\n\n'%j)
+            pbar.update(100)
+    #TODO   df.to_csv('2022-2-remain_proc_%s_%s_finished.csv'%(mark,j))
     return df
 pool = multiprocessing.Pool(processes=num_processes)
 result =pool.map(func, chunks)
 f_final=pd.concat(result,sort=False)
-f_final.to_csv('variant_sum_uniprot.csv')
-print(f_final)
+f_final.to_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/2022-02-variant-sum_remain_deal.csv')
+# print(f_final)
