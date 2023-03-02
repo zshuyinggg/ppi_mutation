@@ -1,0 +1,3 @@
+/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/clinvar_variant_sum.py:8: DtypeWarning: Columns (18) have mixed types. Specify dtype option on import or set low_memory=False.
+  f=pd.read_csv(os.path.join(data_path,'clinvar','variant_summary_2023_02_26.txt'),sep='\t')
+20 cpus
