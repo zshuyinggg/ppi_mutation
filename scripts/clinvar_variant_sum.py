@@ -96,10 +96,10 @@ if __name__ == '__main__':
             if j%1000==0: 
                 print ('\n\n\n\n %d completed \n\n\n\n'%j, flush=True)
                 # pbar.update(100)
-                df.to_csv('2023-2-round1_proc_%s_%s_finished.csv'%(mark,j))
+                df.to_csv(os.path.join(data_path,'clinvar','2023_02_26_round1','2023-2-round1_proc_%s_%s_finished.csv'%(mark,j)))
         return df
     pool = multiprocessing.Pool(processes=num_processes)
     result =pool.map(func, chunks)
     f_final=pd.concat(result,sort=False)
-    f_final.to_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/2022-02-variant-sum_remain_deal.csv')
+    f_final.to_csv(os.path.join(data_path,'clinvar','2023-02-26-variant-sum_round1.csv'))
     # print(f_final)

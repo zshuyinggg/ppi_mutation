@@ -15,6 +15,7 @@
 ./scripts/*.csv
 
 /scripts/*.csv
+/scripts/path.json
 
-
+*.pyc
 ./scripts/path.json
