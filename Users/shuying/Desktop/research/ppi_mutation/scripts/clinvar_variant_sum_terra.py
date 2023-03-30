@@ -5,8 +5,7 @@ import sys
 from utils import *
 
 import pandas as pd
-# f=pd.read_csv(os.path.join(data_path,'clinvar','variant_summary_2022-02.txt'),sep='\t')
-f_simple=pd.read_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/2023-02-variant-sum_remain.csv',index_col='#AlleleID')
+f=pd.read_csv(os.path.join(data_path,'clinvar','variant_summary.txt'),sep='\t')
 def if_positive_or_negative(string_list):
     label=[]
     for string in string_list:
@@ -61,22 +60,23 @@ def get_uniprot_from_name(name):
 
 
 
-# f['label']=if_positive_or_negative(f['ClinicalSignificance'])
+f['label']=if_positive_or_negative(f['ClinicalSignificance'])
 
-# keep_cols=['#AlleleID', 'Type', 'Name','label', 'ClinicalSignificance', 'ClinSigSimple', 'ReviewStatus', 'OtherIDs', 'LastEvaluated', 'RS# (dbSNP)',
-#        'nsv/esv (dbVar)', 'RCVaccession']
-# keep_conditions=(f['Type']=='single nucleotide variant') &\
-#               (['no assertion' not in item for item in f['ReviewStatus'].tolist()]) &\
-#                (['p' in item for item in f['Name'].tolist()]) &\
-#                (f['label']!=0)
-# f_simple=f[keep_conditions][keep_cols]
-# f_simple=f_simple.drop_duplicates(subset=['#AlleleID'])
+keep_cols=['#AlleleID', 'Type', 'Name','label', 'ClinicalSignificance', 'ClinSigSimple', 'ReviewStatus', 'OtherIDs', 'LastEvaluated', 'RS# (dbSNP)',
+       'nsv/esv (dbVar)', 'RCVaccession']
+keep_conditions=(f['Type']=='single nucleotide variant') &\
+              (['no assertion' not in item for item in f['ReviewStatus'].tolist()]) &\
+               (['p' in item for item in f['Name'].tolist()]) &\
+               (f['label']!=0)
+f_simple=f[keep_conditions][keep_cols]
+f_simple=f_simple.drop_duplicates(subset=['#AlleleID'])
 
 # f_simple.head()
 
 
-num_processes = multiprocessing.cpu_count()
-print('%s cpus'%num_processes)
+#num_processes = multiprocessing.cpu_count()
+num_processes=8
+print('%s gpus'%num_processes)
 chunk_size = int(f_simple.shape[0]/num_processes)
 global pbar
 pbar = tqdm(total=len(f_simple))
@@ -84,16 +84,16 @@ f_simple['UniPort']=[0]*len(f_simple)
 chunks = [f_simple.loc[f_simple.index[i:i + chunk_size]] for i in range(0, f_simple.shape[0], chunk_size)]
 def func(df):
     mark=df.index[0]
-    print('process %s starts....'%mark)
     for j,idx in enumerate(df.index):
-        df.loc[idx,'UniPort']=get_uniprot_from_name(f_simple.loc[idx,'Name'])
-        if j%100==0: 
-            print ('\n\n\n\n %d completed \n\n\n\n'%j)
-            pbar.update(100)
-            df.to_csv('2023-2-round2_proc_%s_%s_finished.csv'%(mark,j))
+        if 'UniProt' not in df.loc[idx,'OtherIDs']:
+                df.loc[idx,'UniPort']=get_uniprot_from_name(f_simple.loc[idx,'Name'])
+        if j%1000==0: 
+            print ('\n\n\n\n %d completed \n\n\n\n'%idx)
+            pbar.update(1000)
+            df.to_csv('variant_proc_%s_%s_finished.csv'%(mark,j))
     return df
 pool = multiprocessing.Pool(processes=num_processes)
 result =pool.map(func, chunks)
 f_final=pd.concat(result,sort=False)
-f_final.to_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/2023-02-variant-sum_round2.csv')
-# print(f_final)
+f_final.to_csv('variant_sum_uniprot.csv')
+print(f_final)

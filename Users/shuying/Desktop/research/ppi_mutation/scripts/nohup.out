@@ -1,0 +1,2327 @@
+/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/./clinvar_variant_sum_remain.py:104: DtypeWarning: Columns (18) have mixed types. Specify dtype option on import or set low_memory=False.
+  f=pd.read_csv(os.path.join(data_path,'clinvar','variant_summary_2022-02.txt'),sep='\t')
+The data has 102594 rows
+20 cpus
+5129
+process 6 starts....
+process 39665 starts....
+process 101605 starts....
+process 253695 starts....
+process 183957 starts....
+process 327311 starts....
+process 500469 starts....
+process 599586 starts....
+process 671051 starts....
+process 792358 starts....
+process 923200 starts....
+process 1086723 starts....
+process 1134089 starts....
+process 1162009 starts....
+process 1202281 starts....
+process 1322629 starts....
+process 1543645 starts....
+process 1670622 starts....
+process 1880543 starts....
+process 2083431 starts....
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 0 completed 
+
+
+
+
+
+
+
+
+ 500 completed 
+
+
+
+
+Error Finding Refseq
+Error Finding Refseq
+Error found in https://rest.uniprot.org/uniprotkb/search?query=Error Finding Refseq
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_199037.3
+Error Finding Refseq
+Error Finding Refseq
+Error found in https://rest.uniprot.org/uniprotkb/search?query=Error Finding Refseq
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001145308.5
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+
+
+
+
+ 500 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001145308.5
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 500 completed 
+
+
+
+
+
+
+
+
+ 500 completed 
+
+
+
+
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 1000 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001007022.3
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_203414.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_148674.5
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001385125.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001282684.2
+
+
+
+
+ 500 completed 
+
+
+
+
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001142285.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+
+
+
+
+ 500 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001145308.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001098512.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+
+
+
+
+ 1000 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+
+
+
+
+ 3000 completed 
+
+
+
+
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001100117.3
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_148962.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_153264.7
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001167931.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_015173.4
+
+
+
+
+ 1000 completed 
+
+
+
+
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_198457.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001007022.3
+
+
+
+
+ 1000 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001385125.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_016592.5
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 4500 completed 
+
+
+
+
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_173659.4
+
+
+
+
+ 1500 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001282684.2
+
+
+
+
+ 1500 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 2000 completed 
+
+
+
+
+process 2332108 starts....
+
+
+
+
+ 0 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001282684.2
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001142285.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001201402.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001146227.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001282614.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 1000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001318878.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001388022.1
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001242525.2
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001145308.5
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 1500 completed 
+
+
+
+
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_182480.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001031734.4
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001385125.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001100117.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001146274.2
+
+
+
+
+ 1500 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001142386.3
+
+
+
+
+ 1500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001193485.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_173351.2
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001100117.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001199649.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_212533.3
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001242559.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 1500 completed 
+
+
+
+
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_173159.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_207381.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_203373.3
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001161725.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001146274.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_153264.7
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 1500 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_015173.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001368149.1
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001385125.1
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 4500 completed 
+
+
+
+
+
+
+
+
+ 2000 completed 
+
+
+
+
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001146274.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_198795.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_199451.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_201532.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001388022.1
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_003946.7
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_182973.3
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_018371.5
+
+
+
+
+ 3500 completed 
+
+
+
+
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001282684.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+
+
+
+
+ 3000 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 3500 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001322059.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001257190.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001100117.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001130518.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_144488.6
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001276718.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_148674.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_018371.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_182480.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001130918.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001388464.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001001290.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_021912.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001252020.2
+
+
+
+
+ 2000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001302961.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_145007.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_174918.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001256370.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001001894.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001099921.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+
+
+
+
+ 3000 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001177599.2
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 3000 completed 
+
+
+
+
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001168342.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001326325.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001146274.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001143763.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001291218.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001388022.1
+
+
+
+
+ 3500 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_203285.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_203285.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001017989.3
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001330556.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_203414.3
+
+
+
+
+ 3500 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001347217.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_152315.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001127598.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001007022.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001002006.3
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001166686.2
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001031734.4
+
+
+
+
+ 3000 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 3000 completed 
+
+
+
+
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001349349.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001166208.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 2500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001371097.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001276718.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_182973.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_145007.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_144690.3
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 5000 completed 
+
+
+
+
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_201380.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001161725.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+
+
+
+
+ 4500 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 3500 completed 
+
+
+
+
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001322841.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001144933.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001014831.3
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_203285.2
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_198457.5
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001252020.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 3000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001385125.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001161725.2
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001257190.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001100117.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_152570.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_201380.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 4500 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001261428.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001367868.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001287344.2
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001031734.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001031734.4
+
+
+
+
+ 4000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_181605.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001001894.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001199022.3
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001002006.3
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001286446.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_152705.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001243226.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_173159.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+
+
+
+
+ 5000 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_201380.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001024843.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 3500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001031734.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 4500 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001378477.3
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_018371.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_153264.7
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001098512.3
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001282684.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001146261.3
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001166355.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_182973.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 4000 completed 
+
+
+
+
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001388464.1
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+
+
+
+
+ 4500 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+
+
+
+
+ 5000 completed 
+
+
+
+
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001354689.3
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_198457.5
+Error found in https://rest.uniprot.org/uniprotkb/search?query=NM_201380.4

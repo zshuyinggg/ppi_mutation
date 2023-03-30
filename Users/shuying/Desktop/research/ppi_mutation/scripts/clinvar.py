@@ -24,7 +24,7 @@ import json
 import os, sys
 
 global top_path  # the path of the top_level directory
-global data_dir, script_dir, logging_dir
+global script_path, data_path, logging_path
 # add the top-level directory of this project to sys.path so that we can import modules without error
 POLLING_INTERVAL = 3
 API_URL = "https://rest.uniprot.org"

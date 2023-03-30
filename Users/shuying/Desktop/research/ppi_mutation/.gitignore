@@ -6,21 +6,16 @@
 !/data/*.md
 /trained_models
 
-/scripts/__pycache__/*
 
-
-
-*.pyc
 !**.py
 !**.ipynb
 !**.md
 
-*.txt
-./scripts/*.txt
+
 ./scripts/*.csv
 
 /scripts/*.csv
-./scripts/path.json
+/scripts/path.json
 
 *.pyc
 ./scripts/path.json
