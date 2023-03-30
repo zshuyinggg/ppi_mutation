@@ -5,19 +5,22 @@
 !/data/*.ipynb
 !/data/*.md
 /trained_models
-<<<<<<< HEAD
+
+/scripts/__pycache__/*
 
 
+
+*.pyc
 !**.py
 !**.ipynb
 !**.md
 
+*.txt
+./scripts/*.txt
+./scripts/*.csv
 
-
-
+/scripts/*.csv
 ./scripts/path.json
-=======
-!**/*.py
-!**/*.ipynb
-!**/*.md
->>>>>>> 44bd6a85b04c5161499b1a4436c41bc0e6402dd5
+
+*.pyc
+./scripts/path.json
