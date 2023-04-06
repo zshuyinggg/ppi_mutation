@@ -1,40 +1,66 @@
-from os import path
-import sys
 import torch
+from torch.utils.data import Dataset
+
+global top_path  # the path of the top_level directory
+global script_path, data_path, logging_path
+import os, sys
+from torch.utils.data import DataLoader
 import esm
-try:
-    sys.path.append((path.dirname(path.dirname(path.dirname( path.abspath(__file__))))))
-    print(path.dirname(path.dirname(path.dirname( path.abspath(__file__)))))
-except NameError:
-    import inspect
-    src_file_path = inspect.getfile(lambda: None)
-# from mybiotransformers.bio_transformers import BioTransformers
-#%%
-model, alphabet = torch.hub.load("facebookresearch/esm:main", "esm2_t33_650M_UR50D")
-#%%
-batch_converter = alphabet.get_batch_converter()
-model.eval()  # disables dropout for deterministic results
-
-# Prepare data (first 2 sequences from ESMStructuralSplitDataset superfamily / 4)
-data = [
-    ("protein1", "MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG"),
-    ("protein2", "KALTARQQEVFDLIRDHISQTGMPPTRAEIAQRLGFRSPNAAEEHLKALARKGVIEIVSGASRGIRLLQEE"),
-    ("protein2 with mask","KALTARQQEVFDLIRD<mask>ISQTGMPPTRAEIAQRLGFRSPNAAEEHLKALARKGVIEIVSGASRGIRLLQEE"),
-    ("protein3",  "K A <mask> I S Q"),
-]
-batch_labels, batch_strs, batch_tokens = batch_converter(data)
-batch_lens = (batch_tokens != alphabet.padding_idx).sum(1)
-
-# Extract per-residue representations (on CPU)
-with torch.no_grad():
-    results = model(batch_tokens, repr_layers=[33], return_contacts=True)
-token_representations = results["representations"][33]
-
-# Generate per-sequence representations via averaging
-# NOTE: token 0 is always a beginning-of-sequence token, so the first residue is token 1.
-sequence_representations = []
-for i, tokens_len in enumerate(batch_lens):
-    sequence_representations.append(token_representations[i, 1 : tokens_len - 1].mean(0))
 
 
-#%%
+def find_current_path():
+    if getattr(sys, 'frozen', False):
+        # The application is frozen
+        current = sys.executable
+    else:
+        # The application is not frozen
+        # Change this bit to match where you store your data files:
+        current = __file__
+
+    return current
+
+
+top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
+sys.path.append(top_path)
+
+from scripts.utils import *
+from scripts.esm.datasets import *
+import pandas as pd
+if __name__ == '__main__':
+    Test = ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
+                           data_path + '/2019_1_sequences.csv', gen_file=True, all_uniprot_id_file= \
+                               os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'), \
+                           test_mode=False)
+#
+# Test = ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
+#                        data_path + '/2019_1_test_sequences.csv', gen_file=False, all_uniprot_id_file= \
+#                            os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'), \
+#                        test_mode=True)
+# # All=ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
+# #                          data_path + '/2019_1_all_sequences.csv', gen_file=True, all_uniprot_id_file= \
+# #                              os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'), \
+# #                          test_mode=False)
+#
+#
+# model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+# batch_converter = alphabet.get_batch_converter(truncation_seq_length=20) #TODO: 1)what is a reasonable trancation length. 2) we do not want to trunca
+# dataloader = DataLoader(Test, batch_size=2,
+#                         shuffle=True, num_workers=1)
+# model.eval()
+#
+# for i_batch, sample_batched in enumerate(dataloader):
+#     # print(sample_batched)
+#
+#     sample_batched=list(zip(*sample_batched))
+#
+#     batch_labels, batch_strs, batch_tokens = batch_converter(sample_batched)
+#     #batch=list(zip(*sample_batched))
+#     batch_lens = (batch_tokens != alphabet.padding_idx).sum(1)
+#     with torch.no_grad():
+#         results = model(batch_tokens, repr_layers=[33], return_contacts=True)
+#     token_representations = results["representations"][33]
+#     sequence_representations = []
+#     for i, tokens_len in enumerate(batch_lens):
+#         sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
+#     print('i_batch %s'% i_batch)
+# # %%
