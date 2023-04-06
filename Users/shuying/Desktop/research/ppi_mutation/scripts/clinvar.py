@@ -151,7 +151,7 @@ def process_variants(data, out):
             f_out.write('\n')
             for i in tqdm(range(num_lines)):
                 row = f_in.readline().split('\t')
-                if row[map_dict['Type']] != ''
+                if row[map_dict['Type']] != '':
                     for i in keep:
                         f_out.write(row[i])
                 f_out.write('\n')

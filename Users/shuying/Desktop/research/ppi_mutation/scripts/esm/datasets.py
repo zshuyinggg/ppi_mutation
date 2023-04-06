@@ -25,7 +25,11 @@ sys.path.append(top_path)
 
 from scripts.utils import *
 import pandas as pd
+import dask.dataframe as ddf
+import multiprocessing
 
+# num_partitions = multiprocessing.cpu_count()-4
+num_partitions = 16
 
 class ProteinSequence(Dataset):
     """
@@ -51,6 +55,7 @@ class ProteinSequence(Dataset):
         else:
             if os.path.isfile(gen_file_path):
                 self.all_sequences = pd.read_csv(gen_file_path)
+                self.all_sequences=self.all_sequences[self.all_sequences['Seq'].notna()]
             else:
                 self.gen_sequence_file()
 
@@ -58,9 +63,11 @@ class ProteinSequence(Dataset):
         if self.test_mode:print('-----Test mode on-----------')
         print('Initiating datasets....\n')
         print('Generating mutant sequences...\n')
-        # df_sequence_mutant = self.clinvar.loc[:, ['#AlleleID', 'label', 'UniProt', 'Name']]  # TODO review status
+        df_sequence_mutant = self.clinvar.loc[:, ['#AlleleID', 'label', 'UniProt', 'Name']]  # TODO review status
         # df_sequence_mutant['Seq'] = [gen_mutant_one_row(uniprot_id, name) for uniprot_id, name in \
         #                              zip(df_sequence_mutant['UniProt'], df_sequence_mutant['Name'])]
+        df_dask = ddf.from_pandas(df_sequence_mutant, npartitions=num_partitions)
+        df_dask['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str')).compute(scheduler='multiprocessing')
         len_wild = len(self.all_ppi_uniprot_ids)
         # df_sequence_mutant.to_csv(self.gen_file_path)
         df_sequence_mutant=pd.read_csv(self.gen_file_path)
@@ -132,35 +139,3 @@ class ProteinSequence(Dataset):
 
 # %%
 
-
-# check_if_in_ppi('sss')sss
-Test = ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
-                       data_path + '/2019_1_test_sequences.csv', gen_file=False, all_uniprot_id_file= \
-                           os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'),\
-                       test_mode=True)
-# All=ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
-#                          data_path + '/2019_1_all_sequences.csv', gen_file=True, all_uniprot_id_file= \
-#                              os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'), \
-#                          test_mode=False)
-model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
-batch_converter = alphabet.get_batch_converter(truncation_seq_length=2000) #TODO: 1)what is a reasonable trancation length. 2) we do not want to trunca
-dataloader = DataLoader(Test, batch_size=4,
-                        shuffle=True, num_workers=1)
-model.eval()
-for i_batch, sample_batched in enumerate(dataloader):
-    # print(sample_batched)
-    print('starting batch with length %s '%batch_lens)
-
-    sample_batched=list(zip(*sample_batched))
-
-    batch_labels, batch_strs, batch_tokens = batch_converter(sample_batched)
-    #batch=list(zip(*sample_batched))
-    batch_lens = (batch_tokens != alphabet.padding_idx).sum(1)
-    with torch.no_grad():
-        results = model(batch_tokens, repr_layers=[33], return_contacts=True)
-    token_representations = results["representations"][33]
-    sequence_representations = []
-    for i, tokens_len in enumerate(batch_lens):
-        sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
-    print('batch_lens %s succeeded'%batch_lens)
-# %%

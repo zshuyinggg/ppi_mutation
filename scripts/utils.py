@@ -390,6 +390,8 @@ def gen_mutant_one_row(uniprot_id,name):
     if seq:seq=modify(seq,name)
     else: seq='Error getting sequence from uniprot id'
     return seq
+def gen_mutant_from_df(df):
+    return [gen_mutant_one_row(uniprot,name) for uniprot,name in zip(df['UniProt'],df['Name'])]
 def gen_mutants_oneFile(list_of_ids,list_of_name,out_file,format='dict'):
     total=len(list_of_ids)
     seq_dict={}
