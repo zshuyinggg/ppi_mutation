@@ -17,7 +17,6 @@ parser.add_argument('--input_file', type=str,required=True)
 parser.add_argument('--cpu_num',type=int,default=None)
 # parser.add_argument('--review_filter',type=int,default=1, help='one star above or two star above for the review status')
 
-
 args = parser.parse_args()
 if_raw_file=args.if_raw_file
 cpu_num=args.cpu_num
