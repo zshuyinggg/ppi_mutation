@@ -8,7 +8,7 @@
 #SBATCH --mail-user=zshuying@tamu.edu
 #SBATCH --mem=1280M
 #SBATCH --time=10:00:00
-#SBATCH --output=clinvar.out
+#SBATCH --error=clinvar.out --output=clinvar.out
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=28
 
