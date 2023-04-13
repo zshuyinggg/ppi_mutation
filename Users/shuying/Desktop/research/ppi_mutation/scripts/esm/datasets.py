@@ -67,6 +67,8 @@ class ProteinSequence(Dataset):
         print('Initiating datasets....\n')
         print('Generating mutant sequences...\n')
         df_sequence_mutant = self.clinvar.loc[:, ['#AlleleID', 'label', 'UniProt', 'Name']]  # TODO review status
+        df_sequence_mutant=df_sequence_mutant[df_sequence_mutant['UniProt'].isin(self.all_ppi_uniprot_ids)]
+        print('There are %s rows'%len(df_sequence_mutant))
         # df_sequence_mutant['Seq'] = [gen_mutant_one_row(uniprot_id, name) for uniprot_id, name in \
         #                              zip(df_sequence_mutant['UniProt'], df_sequence_mutant['Name'])]
         df_dask = ddf.from_pandas(df_sequence_mutant, npartitions=num_partitions)
