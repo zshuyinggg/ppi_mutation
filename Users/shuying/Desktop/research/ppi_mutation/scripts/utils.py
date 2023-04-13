@@ -8,6 +8,8 @@ import math
 import requests
 import numpy as np
 from bs4 import BeautifulSoup as BS
+from loguru import logger
+
 import re
 import pandas as pd
 from Bio.SeqUtils import seq1
@@ -292,7 +294,17 @@ def find_pairs(string):
             print('string %s is in humap pair %s'%(string,item))
 
 
+import functools
 
+@functools.lru_cache(maxsize=1024)
+def get_sequence_from_uniprot_id_cached(id):
+    url = f'https://www.uniprot.org/uniprot/{id}.fasta'
+    response = requests.get(url)
+    if response.ok:
+        seq = ''.join(response.text.strip().split('\n')[1:])
+        if seq.isupper():
+            return seq
+    return None
 
 def get_sequence_from_uniprot_id(id):
     url='https://rest.uniprot.org/uniprotkb/%s.fasta'%id
@@ -305,7 +317,7 @@ def get_sequence_from_uniprot_id(id):
 
 
 def get_sequence_from_df(df):
-    return [get_sequence_from_uniprot_id(id) for id in df['UniProt']]
+    return [get_sequence_from_uniprot_id_cached(id) for id in df['UniProt']]
 
 
 
@@ -389,11 +401,13 @@ def modify(seq,hgvs):
         # raise AssertionError
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform
     return new_seq
-
+@logger.catch
 def gen_mutant_one_row(uniprot_id,name):
-    seq=get_sequence_from_uniprot_id(uniprot_id)
+    logger.info("%s"%uniprot_id) #debug
+    seq=get_sequence_from_uniprot_id_cached(uniprot_id)
     if seq:seq=modify(seq,name)
     else: seq='Error getting sequence from uniprot id'
+
     return seq
 def gen_mutant_from_df(df):
     return [gen_mutant_one_row(uniprot,name) for uniprot,name in zip(df['UniProt'],df['Name'])]
