@@ -29,7 +29,8 @@ import dask.dataframe as ddf
 import multiprocessing
 
 # num_partitions = multiprocessing.cpu_count()-4
-num_partitions = 19
+
+num_partitions = 28
 
 class ProteinSequence(Dataset):
     """
@@ -68,12 +69,12 @@ class ProteinSequence(Dataset):
         # df_sequence_mutant['Seq'] = [gen_mutant_one_row(uniprot_id, name) for uniprot_id, name in \
         #                              zip(df_sequence_mutant['UniProt'], df_sequence_mutant['Name'])]
         df_dask = ddf.from_pandas(df_sequence_mutant, npartitions=num_partitions)
-        df_dask['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str')).compute(scheduler='multiprocessing')
+        df_sequence_mutant['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str')).compute(scheduler='multiprocessing')
         len_wild = len(self.all_ppi_uniprot_ids)
         df_sequence_mutant.to_csv(self.gen_file_path)
         df_sequence_mutant=pd.read_csv(self.gen_file_path)
         #TODO exclude those who is not in ppi
-
+        del df_dask,df_sequence_mutant
         print('Generating wild sequences...\n')
         self.all_ppi_uniprot_ids=list(self.all_ppi_uniprot_ids)
         if self.test_mode:
@@ -83,7 +84,9 @@ class ProteinSequence(Dataset):
         df_sequence_wild = pd.DataFrame(0, index=np.arange(len_wild),
                                         columns=['#AlleleID', 'Label', 'UniProt', 'Name', 'Seq'])
         df_sequence_wild['UniProt'] = list(self.all_ppi_uniprot_ids)
-        df_sequence_wild['Seq'] = [get_sequence_from_uniprot_id(id) for id in df_sequence_wild['UniProt']]
+        df_dask = ddf.from_pandas(df_sequence_wild, npartitions=num_partitions)
+        df_sequence_wild['Seq'] = df_dask.map_partitions(get_sequence_from_df, meta=('str')).compute(scheduler='multiprocessing')
+        # df_sequence_wild['Seq'] = [get_sequence_from_uniprot_id(id) for id in df_sequence_wild['UniProt']]
         df_sequence_wild['Label'] = [-1] * len_wild
         df_sequences = pd.concat([df_sequence_wild, df_sequence_mutant])
         df_sequences.to_csv(self.gen_file_path)

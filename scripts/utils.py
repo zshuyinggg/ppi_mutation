@@ -304,6 +304,11 @@ def get_sequence_from_uniprot_id(id):
     else: return None
 
 
+def get_sequence_from_df(df):
+    return [get_sequence_from_uniprot_id(id) for id in df['UniProt']]
+
+
+
 def gen_sequences_oneFile(list_of_ids,batch_size,out_file):
     total=len(list_of_ids)
     seq_dict={}
