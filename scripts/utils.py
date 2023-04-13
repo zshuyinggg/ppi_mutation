@@ -296,7 +296,7 @@ def find_pairs(string):
 
 import functools
 
-@functools.lru_cache(maxsize=1024)
+@functools.lru_cache(maxsize=128)
 def get_sequence_from_uniprot_id_cached(id):
     url = f'https://www.uniprot.org/uniprot/{id}.fasta'
     response = requests.get(url)
@@ -404,6 +404,7 @@ def modify(seq,hgvs):
 @logger.catch
 def gen_mutant_one_row(uniprot_id,name):
     logger.info("%s"%uniprot_id) #debug
+    sys.stdout.flush()    
     seq=get_sequence_from_uniprot_id_cached(uniprot_id)
     if seq:seq=modify(seq,name)
     else: seq='Error getting sequence from uniprot id'
