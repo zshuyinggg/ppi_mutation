@@ -1,8 +1,8 @@
 {
     "data_path":
-        "/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data",
+        "/scratch/user/zshuying/ppi_mutation/data",
     "script_path":
-    "/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts",
+    "/scratch/user/zshuying/ppi_mutation/scripts",
     "logging_path":
     "/home/grads/z/zshuying/Documents/shuying/ppi_mutation/logs"
 }

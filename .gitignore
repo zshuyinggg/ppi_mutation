@@ -24,3 +24,6 @@
 
 *.pyc
 ./scripts/path.json
+
+
+/scripts/*core*
