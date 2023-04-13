@@ -29,7 +29,7 @@ import dask.dataframe as ddf
 import multiprocessing
 
 # num_partitions = multiprocessing.cpu_count()-4
-num_partitions = 16
+num_partitions = 19
 
 class ProteinSequence(Dataset):
     """
