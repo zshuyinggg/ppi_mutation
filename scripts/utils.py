@@ -401,6 +401,7 @@ def modify(seq,hgvs):
         # raise AssertionError
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform
     return new_seq
+<<<<<<< HEAD
 @logger.catch
 def gen_mutant_one_row(uniprot_id,name):
     logger.info("%s"%uniprot_id) #debug
@@ -408,10 +409,30 @@ def gen_mutant_one_row(uniprot_id,name):
     seq=get_sequence_from_uniprot_id_cached(uniprot_id)
     if seq:seq=modify(seq,name)
     else: seq='Error getting sequence from uniprot id'
+=======
+>>>>>>> 60e368b8fa9e0acd3db7e109c894c062345ca9b9
 
+
+from dask.diagnostics import ProgressBar
+ProgressBar().register()
+@logger.catch
+def gen_mutant_one_row(uniprot_id, name, progress_bar=None):
+    seq = get_sequence_from_uniprot_id(uniprot_id)
+    if seq:
+        seq = modify(seq, name)
+    else:
+        seq = 'Error getting sequence from uniprot id'
+    if progress_bar:
+        progress_bar.update(1)
     return seq
+
 def gen_mutant_from_df(df):
-    return [gen_mutant_one_row(uniprot,name) for uniprot,name in zip(df['UniProt'],df['Name'])]
+    with ProgressBar():
+        progress_bar = ProgressBar(len(df))
+        progress_bar.register()
+        return [gen_mutant_one_row(uniprot, name, progress_bar=progress_bar) for uniprot, name in zip(df['UniProt'], df['Name'])]
+
+
 def gen_mutants_oneFile(list_of_ids,list_of_name,out_file,format='dict'):
     total=len(list_of_ids)
     seq_dict={}

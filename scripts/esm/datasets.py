@@ -73,9 +73,9 @@ class ProteinSequence(Dataset):
         # df_sequence_mutant['Seq'] = [gen_mutant_one_row(uniprot_id, name) for uniprot_id, name in \
         #                              zip(df_sequence_mutant['UniProt'], df_sequence_mutant['Name'])]
         df_dask = ddf.from_pandas(df_sequence_mutant, npartitions=num_partitions)
+        print('lazy partitions set')
         df_dask['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str'))
-        with ProgressBar():
-            df_sequence_mutant=df_dask.compute(scheduler='multiprocessing')
+        df_sequence_mutant=df_dask.compute(scheduler='multiprocessing')
         len_wild = len(self.all_ppi_uniprot_ids)
         df_sequence_mutant.to_csv(self.gen_file_path)
         df_sequence_mutant=pd.read_csv(self.gen_file_path)
