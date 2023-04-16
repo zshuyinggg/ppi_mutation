@@ -1,0 +1,3 @@
+Restoring modules from user's shuying
+/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/dataframe/core.py:6984: FutureWarning: Meta is not valid, `map_partitions` and `map_overlap` expects output to be a pandas object. Try passing a pandas object as meta or a dict or tuple representing the (name, dtype) of the columns. In the future the meta you passed will not work.
+  warnings.warn(

@@ -75,7 +75,7 @@ class ProteinSequence(Dataset):
         # print('lazy partitions set')
         # df_dask['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str'))
         # df_sequence_mutant=df_dask.compute(scheduler='multiprocessing')
-        # len_wild = len(self.all_ppi_uniprot_ids)
+        len_wild = len(self.all_ppi_uniprot_ids)
         # df_sequence_mutant.to_csv(self.gen_file_path)
         df_sequence_mutant=pd.read_csv(self.gen_file_path)
         #TODO exclude those who is not in ppi
