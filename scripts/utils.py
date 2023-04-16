@@ -296,7 +296,7 @@ def find_pairs(string):
 
 import functools
 
-@functools.lru_cache(maxsize=256)
+@functools.lru_cache(maxsize=128)
 def get_sequence_from_uniprot_id_cached(id):
     url = f'https://www.uniprot.org/uniprot/{id}.fasta'
     response = requests.get(url)
@@ -401,6 +401,16 @@ def modify(seq,hgvs):
         # raise AssertionError
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform
     return new_seq
+<<<<<<< HEAD
+@logger.catch
+def gen_mutant_one_row(uniprot_id,name):
+    logger.info("%s"%uniprot_id) #debug
+    sys.stdout.flush()    
+    seq=get_sequence_from_uniprot_id_cached(uniprot_id)
+    if seq:seq=modify(seq,name)
+    else: seq='Error getting sequence from uniprot id'
+=======
+>>>>>>> 60e368b8fa9e0acd3db7e109c894c062345ca9b9
 
 
 from dask.diagnostics import ProgressBar
