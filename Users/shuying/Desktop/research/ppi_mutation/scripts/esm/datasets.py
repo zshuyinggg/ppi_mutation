@@ -30,7 +30,7 @@ import dask.dataframe as ddf
 import multiprocessing
 
 # num_partitions = multiprocessing.cpu_count()-4
-num_partitions = 68
+num_partitions = 28
 
 class ProteinSequence(Dataset):
     """
@@ -51,7 +51,7 @@ class ProteinSequence(Dataset):
             [uniprot in self.all_ppi_uniprot_ids for uniprot in self.clinvar['UniProt'].tolist()]]
         # check if sequence file already exist:
         if test_mode:
-            self.clinvar=self.clinvar.loc[:1000,:]
+            self.clinvar=self.clinvar.loc[:100,:]
         if gen_file:
             self.gen_sequence_file()
         else:
@@ -66,17 +66,17 @@ class ProteinSequence(Dataset):
         if self.test_mode:print('-----Test mode on-----------')
         print('Initiating datasets....\n')
         print('Generating mutant sequences...\n')
-        # df_sequence_mutant = self.clinvar.loc[:, ['#AlleleID', 'label', 'UniProt', 'Name']]  # TODO review status
-        # df_sequence_mutant=df_sequence_mutant[df_sequence_mutant['UniProt'].isin(self.all_ppi_uniprot_ids)]
-        # print('There are %s rows'%len(df_sequence_mutant))
-        # # df_sequence_mutant['Seq'] = [gen_mutant_one_row(uniprot_id, name) for uniprot_id, name in \
-        # #                              zip(df_sequence_mutant['UniProt'], df_sequence_mutant['Name'])]
-        # df_dask = ddf.from_pandas(df_sequence_mutant, npartitions=num_partitions)
-        # print('lazy partitions set')
-        # df_dask['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str'))
-        # df_sequence_mutant=df_dask.compute(scheduler='multiprocessing')
-        # len_wild = len(self.all_ppi_uniprot_ids)
-        # df_sequence_mutant.to_csv(self.gen_file_path)
+        df_sequence_mutant = self.clinvar.loc[:, ['#AlleleID', 'label', 'UniProt', 'Name']]  # TODO review status
+        df_sequence_mutant=df_sequence_mutant[df_sequence_mutant['UniProt'].isin(self.all_ppi_uniprot_ids)]
+        print('There are %s rows'%len(df_sequence_mutant))
+        # df_sequence_mutant['Seq'] = [gen_mutant_one_row(uniprot_id, name) for uniprot_id, name in \
+        #                              zip(df_sequence_mutant['UniProt'], df_sequence_mutant['Name'])]
+        df_dask = ddf.from_pandas(df_sequence_mutant, npartitions=num_partitions)
+        print('lazy partitions set')
+        df_dask['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str'))
+        df_sequence_mutant=df_dask.compute(scheduler='multiprocessing')
+        len_wild = len(self.all_ppi_uniprot_ids)
+        df_sequence_mutant.to_csv(self.gen_file_path)
         df_sequence_mutant=pd.read_csv(self.gen_file_path)
         #TODO exclude those who is not in ppi
         # del df_dask

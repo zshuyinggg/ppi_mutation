@@ -406,21 +406,22 @@ def modify(seq,hgvs):
 from dask.diagnostics import ProgressBar
 ProgressBar().register()
 @logger.catch
-def gen_mutant_one_row(uniprot_id, name, progress_bar=None):
+def gen_mutant_one_row(uniprot_id, name):
+    print('getting sequence from uniprot_id %s'%uniprot_id)
     seq = get_sequence_from_uniprot_id(uniprot_id)
+    print('get result as %s'%seq)
     if seq:
+        print('modifing sequence')
         seq = modify(seq, name)
+        print('sequence after modification is %s'%seq)
     else:
+        print('result empty. seq marked as Error getting sequence from uniprot id')
         seq = 'Error getting sequence from uniprot id'
-    if progress_bar:
-        progress_bar.update(1)
+
     return seq
 
 def gen_mutant_from_df(df):
-    with ProgressBar():
-        progress_bar = ProgressBar(len(df))
-        progress_bar.register()
-        return [gen_mutant_one_row(uniprot, name, progress_bar=progress_bar) for uniprot, name in zip(df['UniProt'], df['Name'])]
+    return [gen_mutant_one_row(uniprot, name) for uniprot, name in zip(df['UniProt'], df['Name'])]
 
 
 def gen_mutants_oneFile(list_of_ids,list_of_name,out_file,format='dict'):
