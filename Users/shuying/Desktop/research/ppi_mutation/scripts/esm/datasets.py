@@ -107,9 +107,8 @@ class ProteinSequence(Dataset):
     def __getitem__(self, idx, uniprot=None, label=None):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        sequences = self.all_sequences.loc[idx, 'Seq']  # TODO check index
-        # labels=self.all_sequences.loc[idx,'Label']
-        return idx, sequences.replace('*','')
+        sequences = self.all_sequences.loc[idx, 'Seq']
+        return idx, sequences
 
 
 # %%

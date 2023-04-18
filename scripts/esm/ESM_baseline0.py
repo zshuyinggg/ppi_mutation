@@ -27,21 +27,11 @@ from scripts.utils import *
 from scripts.esm.datasets import *
 import pandas as pd
 if __name__ == '__main__':
-    Test = ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
-                           data_path + '/2019_1_sequences.csv', gen_file=True, all_uniprot_id_file= \
+    dataset = ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
+                           data_path + '/2019_1_sequences_terminated.csv', gen_file=False, all_uniprot_id_file= \
                                os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'), \
                            test_mode=False)
-#
-# Test = ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
-#                        data_path + '/2019_1_test_sequences.csv', gen_file=False, all_uniprot_id_file= \
-#                            os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'), \
-#                        test_mode=True)
-# # All=ProteinSequence(os.path.join(script_path, 'merged_2019_1.csv'),
-# #                          data_path + '/2019_1_all_sequences.csv', gen_file=True, all_uniprot_id_file= \
-# #                              os.path.join(data_path, 'single_protein_seq/uniprotids_humap_huri.txt'), \
-# #                          test_mode=False)
-#
-#
+
 # model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
 # batch_converter = alphabet.get_batch_converter(truncation_seq_length=20) #TODO: 1)what is a reasonable trancation length. 2) we do not want to trunca
 # dataloader = DataLoader(Test, batch_size=2,
