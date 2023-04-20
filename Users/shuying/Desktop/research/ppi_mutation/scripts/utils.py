@@ -25,14 +25,10 @@ global script_path, data_path, logging_path
 
 top_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(top_path)
-def get_local_paths():
-    with open(file=os.path.join(top_path, 'scripts/path.json')) as f:
-        mydict = json.load(f)
-    return mydict['script_path'], mydict['data_path'], mydict['logging_path']
+script_path, data_path, logging_path= os.path.join(top_path,'scripts'), \
+    os.path.join(top_path,'data'), \
+    os.path.join(top_path,'logs')
 
-
-script_path, data_path, logging_path = get_local_paths()
-  
 def get_stringdb_id(data):
 #'../data/9606.protein.physical.links.detailed.v11.5.txt'
 
@@ -296,7 +292,7 @@ def find_pairs(string):
 
 import functools
 
-@functools.lru_cache(maxsize=256)
+@functools.lru_cache(maxsize=128)
 def get_sequence_from_uniprot_id_cached(id):
     url = f'https://www.uniprot.org/uniprot/{id}.fasta'
     response = requests.get(url)
