@@ -28,6 +28,7 @@ from scripts.utils import *
 import pandas as pd
 import dask.dataframe as ddf
 import multiprocessing
+from torchvision import transforms, utils
 
 # num_partitions = multiprocessing.cpu_count()-4
 num_partitions = 28
@@ -40,7 +41,8 @@ class ProteinSequence(Dataset):
 
     def __init__(self, clinvar_csv, gen_file_path, gen_file=True,
                  all_uniprot_id_file='data/single_protein_seq/uniprotids_humap_huri.txt',
-                 test_mode=False):
+                 test_mode=False,
+                 transform=None):
         print('Reading file')
         self.clinvar = pd.read_csv(clinvar_csv)
         self.test_mode=test_mode
@@ -56,10 +58,11 @@ class ProteinSequence(Dataset):
             self.gen_sequence_file()
         else:
             self.read_sequence_file()
+        self.transform=transform
     def read_sequence_file(self):
         if os.path.isfile(self.gen_file_path):
             self.all_sequences = pd.read_csv(self.gen_file_path)
-            self.all_sequences=self.all_sequences[self.all_sequences['Seq'].notna()]
+            self.all_sequences=self.all_sequences[self.all_sequences['Seq'].apply(lambda x: not('Error' in x))]
         else: self.gen_sequence_file()
 
     def gen_sequence_file(self) -> object:
@@ -107,9 +110,39 @@ class ProteinSequence(Dataset):
     def __getitem__(self, idx, uniprot=None, label=None):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        sequences = self.all_sequences.loc[idx, 'Seq']
-        return idx, sequences
+        sequences = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Seq')]
+        labels=self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Label')]
+        sample={'idx':idx, 'seq':sequences,'label':labels} #multiple or single?
+        if self.transform:
+            sample=self.transform(sample)
+        return sample
 
 
-# %%
+
+class ToTensor(object):
+    """convert pandas object to Tensors"""
+
+    def __call__(self,sample):
+        idx,sequences,labels=sample['idx'],sample['seq'],sample['label']
+        return {'idx':torch.tensor(idx),
+        'seq':torch.tensor(sequences),
+        'label':torch.tensor(labels)}
+
+
+class RandomCrop(object):
+    def __init__(self,crop_size):
+        assert isinstance(crop_size,int)
+        self.crop_size=crop_size
+
+    def __call__(self,sample):
+        sequence=sample['seq']
+        l=len(sequence)
+        if self.crop_size<l:
+            start=np.random.randint(0,l-self.crop_size)
+        else:
+            start=0
+        new_seq=sequence[start:]
+        return {'idx':sample['idx'], 'seq':new_seq,'label':sample['label']}
+
+
 
