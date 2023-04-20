@@ -1,0 +1,14 @@
+Lmod has detected the following error: These module(s) or extension(s) exist
+but cannot be loaded as requested: "Python/3.10.8"
+   Try: "module spider Python/3.10.8" to see how to load the module(s).
+
+
+
+Python 3.10.8
+Traceback (most recent call last):
+  File "/scratch/user/zshuying/ppi_mutation/scripts/esm/ESM_baseline0.py", line 26, in <module>
+    from scripts.utils import *
+  File "/scratch/user/zshuying/ppi_mutation/scripts/utils.py", line 10, in <module>
+    from bs4 import BeautifulSoup as BS
+ModuleNotFoundError: No module named 'bs4'
+srun: error: g061: task 0: Exited with exit code 1

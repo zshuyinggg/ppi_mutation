@@ -1,0 +1,131 @@
+Collecting git+https://github.com/facebookresearch/esm.git
+  Cloning https://github.com/facebookresearch/esm.git to /tmp/pip-req-build-yf5syicl
+  Running command git clone --quiet https://github.com/facebookresearch/esm.git /tmp/pip-req-build-yf5syicl
+  Resolved https://github.com/facebookresearch/esm.git to commit c9c7d4f0fec964ce10c3e11dccec6c16edaa5144
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: xlrd in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (2.0.1)
+Collecting dask
+  Downloading dask-2023.4.0-py3-none-any.whl (1.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 20.6 MB/s eta 0:00:00
+Collecting pytorch-lightning
+  Downloading pytorch_lightning-2.0.1.post0-py3-none-any.whl (718 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 718.6/718.6 kB 36.0 MB/s eta 0:00:00
+Collecting cloudpickle>=1.1.1
+  Downloading cloudpickle-2.2.1-py3-none-any.whl (25 kB)
+Requirement already satisfied: fsspec>=0.6.0 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from dask) (2023.4.0)
+Collecting toolz>=0.8.2
+  Downloading toolz-0.12.0-py3-none-any.whl (55 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 55.8/55.8 kB 4.7 MB/s eta 0:00:00
+Collecting click>=7.0
+  Downloading click-8.1.3-py3-none-any.whl (96 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 96.6/96.6 kB 4.6 MB/s eta 0:00:00
+Collecting partd>=1.2.0
+  Downloading partd-1.4.0-py3-none-any.whl (18 kB)
+Requirement already satisfied: packaging>=20.0 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from dask) (23.1)
+Requirement already satisfied: pyyaml>=5.3.1 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from dask) (6.0)
+Collecting importlib-metadata>=4.13.0
+  Downloading importlib_metadata-6.5.0-py3-none-any.whl (22 kB)
+Requirement already satisfied: tqdm>=4.57.0 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from pytorch-lightning) (4.65.0)
+Collecting torchmetrics>=0.7.0
+  Downloading torchmetrics-0.11.4-py3-none-any.whl (519 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 519.2/519.2 kB 47.3 MB/s eta 0:00:00
+Requirement already satisfied: typing-extensions>=4.0.0 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from pytorch-lightning) (4.5.0)
+Requirement already satisfied: numpy>=1.17.2 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from pytorch-lightning) (1.23.4)
+Collecting lightning-utilities>=0.7.0
+  Downloading lightning_utilities-0.8.0-py3-none-any.whl (20 kB)
+Collecting torch>=1.11.0
+  Downloading torch-2.0.0-cp310-cp310-manylinux1_x86_64.whl (619.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 619.9/619.9 MB 7.1 MB/s eta 0:00:00
+Requirement already satisfied: requests in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from fsspec>=0.6.0->dask) (2.28.2)
+Requirement already satisfied: aiohttp!=4.0.0a0,!=4.0.0a1 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from fsspec>=0.6.0->dask) (3.8.4)
+Collecting zipp>=0.5
+  Downloading zipp-3.15.0-py3-none-any.whl (6.8 kB)
+Collecting locket
+  Downloading locket-1.0.0-py2.py3-none-any.whl (4.4 kB)
+Collecting sympy
+  Downloading sympy-1.11.1-py3-none-any.whl (6.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.5/6.5 MB 72.3 MB/s eta 0:00:00
+Collecting nvidia-cufft-cu11==10.9.0.58
+  Downloading nvidia_cufft_cu11-10.9.0.58-py3-none-manylinux1_x86_64.whl (168.4 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 168.4/168.4 MB 17.1 MB/s eta 0:00:00
+Collecting nvidia-cusparse-cu11==11.7.4.91
+  Downloading nvidia_cusparse_cu11-11.7.4.91-py3-none-manylinux1_x86_64.whl (173.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 173.2/173.2 MB 18.0 MB/s eta 0:00:00
+Collecting triton==2.0.0
+  Downloading triton-2.0.0-1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (63.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 63.3/63.3 MB 24.1 MB/s eta 0:00:00
+Collecting nvidia-cuda-nvrtc-cu11==11.7.99
+  Downloading nvidia_cuda_nvrtc_cu11-11.7.99-2-py3-none-manylinux1_x86_64.whl (21.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 21.0/21.0 MB 36.1 MB/s eta 0:00:00
+Collecting nvidia-cudnn-cu11==8.5.0.96
+  Downloading nvidia_cudnn_cu11-8.5.0.96-2-py3-none-manylinux1_x86_64.whl (557.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 557.1/557.1 MB 7.5 MB/s eta 0:00:00
+Collecting nvidia-cuda-cupti-cu11==11.7.101
+  Downloading nvidia_cuda_cupti_cu11-11.7.101-py3-none-manylinux1_x86_64.whl (11.8 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.8/11.8 MB 96.0 MB/s eta 0:00:00
+Collecting nvidia-curand-cu11==10.2.10.91
+  Downloading nvidia_curand_cu11-10.2.10.91-py3-none-manylinux1_x86_64.whl (54.6 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 54.6/54.6 MB 43.7 MB/s eta 0:00:00
+Collecting networkx
+  Downloading networkx-3.1-py3-none-any.whl (2.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 62.6 MB/s eta 0:00:00
+Collecting nvidia-cusolver-cu11==11.4.0.1
+  Downloading nvidia_cusolver_cu11-11.4.0.1-2-py3-none-manylinux1_x86_64.whl (102.6 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 102.6/102.6 MB 26.2 MB/s eta 0:00:00
+Collecting nvidia-nvtx-cu11==11.7.91
+  Downloading nvidia_nvtx_cu11-11.7.91-py3-none-manylinux1_x86_64.whl (98 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 98.6/98.6 kB 10.0 MB/s eta 0:00:00
+Collecting nvidia-cublas-cu11==11.10.3.66
+  Downloading nvidia_cublas_cu11-11.10.3.66-py3-none-manylinux1_x86_64.whl (317.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 317.1/317.1 MB 11.8 MB/s eta 0:00:00
+Collecting nvidia-cuda-runtime-cu11==11.7.99
+  Downloading nvidia_cuda_runtime_cu11-11.7.99-py3-none-manylinux1_x86_64.whl (849 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 849.3/849.3 kB 38.1 MB/s eta 0:00:00
+Requirement already satisfied: filelock in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from torch>=1.11.0->pytorch-lightning) (3.12.0)
+Collecting nvidia-nccl-cu11==2.14.3
+  Downloading nvidia_nccl_cu11-2.14.3-py3-none-manylinux1_x86_64.whl (177.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 177.1/177.1 MB 18.8 MB/s eta 0:00:00
+Collecting jinja2
+  Using cached Jinja2-3.1.2-py3-none-any.whl (133 kB)
+Requirement already satisfied: wheel in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from nvidia-cublas-cu11==11.10.3.66->torch>=1.11.0->pytorch-lightning) (0.37.1)
+Requirement already satisfied: setuptools in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from nvidia-cublas-cu11==11.10.3.66->torch>=1.11.0->pytorch-lightning) (65.5.0)
+Collecting lit
+  Downloading lit-16.0.1.tar.gz (137 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137.9/137.9 kB 13.3 MB/s eta 0:00:00
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Collecting cmake
+  Downloading cmake-3.26.3-py2.py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (24.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 24.0/24.0 MB 52.4 MB/s eta 0:00:00
+Requirement already satisfied: async-timeout<5.0,>=4.0.0a3 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec>=0.6.0->dask) (4.0.2)
+Requirement already satisfied: yarl<2.0,>=1.0 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec>=0.6.0->dask) (1.8.2)
+Requirement already satisfied: frozenlist>=1.1.1 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec>=0.6.0->dask) (1.3.3)
+Requirement already satisfied: charset-normalizer<4.0,>=2.0 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec>=0.6.0->dask) (3.1.0)
+Requirement already satisfied: attrs>=17.3.0 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec>=0.6.0->dask) (23.1.0)
+Requirement already satisfied: aiosignal>=1.1.2 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec>=0.6.0->dask) (1.3.1)
+Requirement already satisfied: multidict<7.0,>=4.5 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec>=0.6.0->dask) (6.0.4)
+Collecting MarkupSafe>=2.0
+  Downloading MarkupSafe-2.1.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (25 kB)
+Requirement already satisfied: idna<4,>=2.5 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from requests->fsspec>=0.6.0->dask) (3.4)
+Requirement already satisfied: certifi>=2017.4.17 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from requests->fsspec>=0.6.0->dask) (2022.9.24)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in /scratch/user/zshuying/.conda/envs/shuying/lib/python3.10/site-packages (from requests->fsspec>=0.6.0->dask) (1.26.15)
+Collecting mpmath>=0.19
+  Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.2/536.2 kB 43.0 MB/s eta 0:00:00
+Building wheels for collected packages: fair-esm, lit
+  Building wheel for fair-esm (pyproject.toml): started
+  Building wheel for fair-esm (pyproject.toml): finished with status 'done'
+  Created wheel for fair-esm: filename=fair_esm-2.0.1-py3-none-any.whl size=105311 sha256=cdfb51fc99cb4edf97e4202f107e52d1d3649c36623ead3aaa9b9d1f2675d754
+  Stored in directory: /tmp/pip-ephem-wheel-cache-47nv2bxo/wheels/f3/b2/ec/4db0b108f6367c7563f99b2445e1137d486003fb2f9bfd2f53
+  Building wheel for lit (setup.py): started
+  Building wheel for lit (setup.py): finished with status 'done'
+  Created wheel for lit: filename=lit-16.0.1-py3-none-any.whl size=88173 sha256=d33a26b111f5f133e1e4a2836d75800807485697e1a6b54c9d92ca033c53963e
+  Stored in directory: /scratch/user/zshuying/PIP_CACHE/wheels/33/c2/b7/b91592eb5167b4293827b97fb02d52686773dded13f7fb1054
+Successfully built fair-esm lit
+Installing collected packages: mpmath, lit, fair-esm, cmake, zipp, toolz, sympy, nvidia-nvtx-cu11, nvidia-nccl-cu11, nvidia-cusparse-cu11, nvidia-curand-cu11, nvidia-cufft-cu11, nvidia-cuda-runtime-cu11, nvidia-cuda-nvrtc-cu11, nvidia-cuda-cupti-cu11, nvidia-cublas-cu11, networkx, MarkupSafe, locket, lightning-utilities, cloudpickle, click, partd, nvidia-cusolver-cu11, nvidia-cudnn-cu11, jinja2, importlib-metadata, dask, triton, torch, torchmetrics, pytorch-lightning
+Successfully installed MarkupSafe-2.1.2 click-8.1.3 cloudpickle-2.2.1 cmake-3.26.3 dask-2023.4.0 fair-esm-2.0.1 importlib-metadata-6.5.0 jinja2-3.1.2 lightning-utilities-0.8.0 lit-16.0.1 locket-1.0.0 mpmath-1.3.0 networkx-3.1 nvidia-cublas-cu11-11.10.3.66 nvidia-cuda-cupti-cu11-11.7.101 nvidia-cuda-nvrtc-cu11-11.7.99 nvidia-cuda-runtime-cu11-11.7.99 nvidia-cudnn-cu11-8.5.0.96 nvidia-cufft-cu11-10.9.0.58 nvidia-curand-cu11-10.2.10.91 nvidia-cusolver-cu11-11.4.0.1 nvidia-cusparse-cu11-11.7.4.91 nvidia-nccl-cu11-2.14.3 nvidia-nvtx-cu11-11.7.91 partd-1.4.0 pytorch-lightning-2.0.1.post0 sympy-1.11.1 toolz-0.12.0 torch-2.0.0 torchmetrics-0.11.4 triton-2.0.0 zipp-3.15.0
