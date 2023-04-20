@@ -1,25 +1,22 @@
-#!/bin/bash
-
-
-
-
-#SBATCH --ntasks=1 
-#SBATCH --cpus-per-task=24 
+#!/bin/bash 
 
 #SBATCH --export=NONE                #Do not propagate environment
 #SBATCH --get-user-env=L             #Replicate login environment
 #SBATCH --job-name=clinvar
+#SBATCH --ntasks=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=zshuying@tamu.edu
-#SBATCH --mem=30G
-#SBATCH --time=4:00:00
-#SBATCH --output=clinvar.out
+#SBATCH --mem=56G
+#SBATCH --time=10:00:00
+#SBATCH --error=clinvar.err --output=clinvar.out
 #SBATCH --nodes=1
+#SBATCH --cpus-per-task=28
 
 module restore shuying
 
 source /sw/eb/sw/Anaconda3/2021.05/etc/profile.d/conda.sh
-conda activate shuying
+module load WebProxy
+conda activate cpu
 python --version
 cd $SCRATCH/ppi_mutation/scripts
 

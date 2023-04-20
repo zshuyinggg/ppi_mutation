@@ -8,6 +8,8 @@ import math
 import requests
 import numpy as np
 from bs4 import BeautifulSoup as BS
+from loguru import logger
+
 import re
 import pandas as pd
 from Bio.SeqUtils import seq1
@@ -292,7 +294,17 @@ def find_pairs(string):
             print('string %s is in humap pair %s'%(string,item))
 
 
+import functools
 
+@functools.lru_cache(maxsize=128)
+def get_sequence_from_uniprot_id_cached(id):
+    url = f'https://www.uniprot.org/uniprot/{id}.fasta'
+    response = requests.get(url)
+    if response.ok:
+        seq = ''.join(response.text.strip().split('\n')[1:])
+        if seq.isupper():
+            return seq
+    return None
 
 def get_sequence_from_uniprot_id(id):
     url='https://rest.uniprot.org/uniprotkb/%s.fasta'%id
@@ -302,6 +314,11 @@ def get_sequence_from_uniprot_id(id):
     if seq.isupper() and seq:
         return seq
     else: return None
+
+
+def get_sequence_from_df(df):
+    return [get_sequence_from_uniprot_id_cached(id) for id in df['UniProt']]
+
 
 
 def gen_sequences_oneFile(list_of_ids,batch_size,out_file):
@@ -385,13 +402,28 @@ def modify(seq,hgvs):
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform
     return new_seq
 
-def gen_mutant_one_row(uniprot_id,name):
-    seq=get_sequence_from_uniprot_id(uniprot_id)
-    if seq:seq=modify(seq,name)
-    else: seq='Error getting sequence from uniprot id'
+
+from dask.diagnostics import ProgressBar
+ProgressBar().register()
+@logger.catch
+def gen_mutant_one_row(uniprot_id, name):
+    print('getting sequence from uniprot_id %s'%uniprot_id)
+    seq = get_sequence_from_uniprot_id(uniprot_id)
+    print('get result as %s'%seq)
+    if seq:
+        print('modifing sequence')
+        seq = modify(seq, name)
+        print('sequence after modification is %s'%seq)
+    else:
+        print('result empty. seq marked as Error getting sequence from uniprot id')
+        seq = 'Error getting sequence from uniprot id'
+
     return seq
+
 def gen_mutant_from_df(df):
-    return [gen_mutant_one_row(uniprot,name) for uniprot,name in zip(df['UniProt'],df['Name'])]
+    return [gen_mutant_one_row(uniprot, name) for uniprot, name in zip(df['UniProt'], df['Name'])]
+
+
 def gen_mutants_oneFile(list_of_ids,list_of_name,out_file,format='dict'):
     total=len(list_of_ids)
     seq_dict={}

@@ -1,0 +1,241 @@
+Restoring modules from user's shuying
+/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/dataframe/core.py:6984: FutureWarning: Meta is not valid, `map_partitions` and `map_overlap` expects output to be a pandas object. Try passing a pandas object as meta or a dict or tuple representing the (name, dtype) of the columns. In the future the meta you passed will not work.
+  warnings.warn(
+2023-04-16 12:25:12.796 | ERROR    | scripts.utils:<listcomp>:424 - An error has been caught in function '<listcomp>', process 'SpawnProcess-3' (26230), thread 'MainThread' (47636698581184):
+Traceback (most recent call last):
+
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/connection.py", line 174, in _new_conn
+    conn = connection.create_connection(
+           │          └ <function create_connection at 0x2b5373ec9900>
+           └ <module 'urllib3.util.connection' from '/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/util/conn...
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/util/connection.py", line 95, in create_connection
+    raise err
+          └ TimeoutError(110, 'Connection timed out')
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/util/connection.py", line 85, in create_connection
+    sock.connect(sa)
+    │            └ ('10.76.5.24', 8080)
+    └ None
+
+TimeoutError: [Errno 110] Connection timed out
+
+
+During handling of the above exception, another exception occurred:
+
+
+Traceback (most recent call last):
+
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/connectionpool.py", line 700, in urlopen
+    self._prepare_proxy(conn)
+    │    │              └ None
+    │    └ <function HTTPSConnectionPool._prepare_proxy at 0x2b53780ca9e0>
+    └ <urllib3.connectionpool.HTTPSConnectionPool object at 0x2b537e4594b0>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/connectionpool.py", line 996, in _prepare_proxy
+    conn.connect()
+    │    └ <function HTTPSConnection.connect at 0x2b5373f52320>
+    └ <urllib3.connection.HTTPSConnection object at 0x2b537e4599c0>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/connection.py", line 363, in connect
+    self.sock = conn = self._new_conn()
+    │    │             │    └ <function HTTPConnection._new_conn at 0x2b5373f51d80>
+    │    │             └ <urllib3.connection.HTTPSConnection object at 0x2b537e4599c0>
+    │    └ None
+    └ <urllib3.connection.HTTPSConnection object at 0x2b537e4599c0>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/connection.py", line 179, in _new_conn
+    raise ConnectTimeoutError(
+          └ <class 'urllib3.exceptions.ConnectTimeoutError'>
+
+urllib3.exceptions.ConnectTimeoutError: (<urllib3.connection.HTTPSConnection object at 0x2b537e4599c0>, 'Connection to 10.76.5.24 timed out. (connect timeout=None)')
+
+
+During handling of the above exception, another exception occurred:
+
+
+Traceback (most recent call last):
+
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+           │    └ <function HTTPConnectionPool.urlopen at 0x2b53780ca830>
+           └ <urllib3.connectionpool.HTTPSConnectionPool object at 0x2b537e4594b0>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    retries = retries.increment(
+              │       └ <function Retry.increment at 0x2b5373efc310>
+              └ Retry(total=0, connect=None, read=False, redirect=None, status=None)
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/urllib3/util/retry.py", line 592, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+          │             │      │    │        │             └ 'unknown'
+          │             │      │    │        └ <class 'urllib3.exceptions.ResponseError'>
+          │             │      │    └ ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x2b537e4599c0>, 'Connection to 10.76.5.24 timed out. (conn...
+          │             │      └ '/uniprotkb/O15020.fasta'
+          │             └ <urllib3.connectionpool.HTTPSConnectionPool object at 0x2b537e4594b0>
+          └ <class 'urllib3.exceptions.MaxRetryError'>
+
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='rest.uniprot.org', port=443): Max retries exceeded with url: /uniprotkb/O15020.fasta (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x2b537e4599c0>, 'Connection to 10.76.5.24 timed out. (connect timeout=None)'))
+
+
+During handling of the above exception, another exception occurred:
+
+
+Traceback (most recent call last):
+
+  File "<string>", line 1, in <module>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/multiprocessing/spawn.py", line 116, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+               │     │   └ 3
+               │     └ 16
+               └ <function _main at 0x2b534fe50550>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/multiprocessing/spawn.py", line 129, in _main
+    return self._bootstrap(parent_sentinel)
+           │    │          └ 3
+           │    └ <function BaseProcess._bootstrap at 0x2b534fd7ef80>
+           └ <SpawnProcess name='SpawnProcess-3' parent=26143 started>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+    │    └ <function BaseProcess.run at 0x2b534fd7e5f0>
+    └ <SpawnProcess name='SpawnProcess-3' parent=26143 started>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {}
+    │    │        │    │        └ <SpawnProcess name='SpawnProcess-3' parent=26143 started>
+    │    │        │    └ (<concurrent.futures.process._SafeQueue object at 0x2b534fe78040>, <multiprocessing.queues.SimpleQueue object at 0x2b537e4586...
+    │    │        └ <SpawnProcess name='SpawnProcess-3' parent=26143 started>
+    │    └ <function _process_worker at 0x2b537dcf9990>
+    └ <SpawnProcess name='SpawnProcess-3' parent=26143 started>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/concurrent/futures/process.py", line 246, in _process_worker
+    r = call_item.fn(*call_item.args, **call_item.kwargs)
+        │         │   │         │       │         └ {}
+        │         │   │         │       └ <concurrent.futures.process._CallItem object at 0x2b534fd3f010>
+        │         │   │         └ ([(('assign-a02f6459e7f95c6206183b17d6ddc132', 0), b'\x80\x05\x95d\xf0\x00\x00\x00\x00\x00\x00(\x8c\x11dask.optimization\x94\...
+        │         │   └ <concurrent.futures.process._CallItem object at 0x2b534fd3f010>
+        │         └ <function batch_execute_tasks at 0x2b537db55e10>
+        └ <concurrent.futures.process._CallItem object at 0x2b534fd3f010>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/local.py", line 238, in batch_execute_tasks
+    return [execute_task(*a) for a in it]
+            │                         └ [(('assign-a02f6459e7f95c6206183b17d6ddc132', 0), b'\x80\x05\x95d\xf0\x00\x00\x00\x00\x00\x00(\x8c\x11dask.optimization\x94\x...
+            └ <function execute_task at 0x2b537db55d80>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/local.py", line 238, in <listcomp>
+    return [execute_task(*a) for a in it]
+            │             │      └ (('assign-a02f6459e7f95c6206183b17d6ddc132', 0), b'\x80\x05\x95d\xf0\x00\x00\x00\x00\x00\x00(\x8c\x11dask.optimization\x94\x8...
+            │             └ (('assign-a02f6459e7f95c6206183b17d6ddc132', 0), b'\x80\x05\x95d\xf0\x00\x00\x00\x00\x00\x00(\x8c\x11dask.optimization\x94\x8...
+            └ <function execute_task at 0x2b537db55d80>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/local.py", line 224, in execute_task
+    result = _execute_task(task, data)
+             │             │     └ {('from_pandas-ff3ab9f4a2076aacb00a15a12493bda9', 0):       #AlleleID  label UniProt                                        N...
+             │             └ (subgraph_callable-e03c042d-7dca-4d59-898e-320fe85e6deb, ('from_pandas-ff3ab9f4a2076aacb00a15a12493bda9', 0), 'Seq', 'from_pa...
+             └ <function _execute_task at 0x2b537da43640>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/core.py", line 119, in _execute_task
+    return func(*(_execute_task(a, cache) for a in args))
+           │      │                │               └ (('from_pandas-ff3ab9f4a2076aacb00a15a12493bda9', 0), 'Seq', 'from_pandas-ff3ab9f4a2076aacb00a15a12493bda9')
+           │      │                └ {('from_pandas-ff3ab9f4a2076aacb00a15a12493bda9', 0):       #AlleleID  label UniProt                                        N...
+           │      └ <function _execute_task at 0x2b537da43640>
+           └ subgraph_callable-e03c042d-7dca-4d59-898e-320fe85e6deb
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/optimization.py", line 990, in __call__
+    return core.get(self.dsk, self.outkey, dict(zip(self.inkeys, args)))
+           │    │   │    │    │    │                │    │       └ (      #AlleleID  label UniProt                                        Name
+           │    │   │    │    │    │                │    │         6        227921      1  O15020  NM_006946.3(SPTBN...
+           │    │   │    │    │    │                │    └ <member 'inkeys' of 'SubgraphCallable' objects>
+           │    │   │    │    │    │                └ subgraph_callable-e03c042d-7dca-4d59-898e-320fe85e6deb
+           │    │   │    │    │    └ <member 'outkey' of 'SubgraphCallable' objects>
+           │    │   │    │    └ subgraph_callable-e03c042d-7dca-4d59-898e-320fe85e6deb
+           │    │   │    └ <member 'dsk' of 'SubgraphCallable' objects>
+           │    │   └ subgraph_callable-e03c042d-7dca-4d59-898e-320fe85e6deb
+           │    └ <function get at 0x2b537da436d0>
+           └ <module 'dask.core' from '/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/core.py'>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/core.py", line 149, in get
+    result = _execute_task(task, cache)
+             │             │     └ {'__dask_blockwise__0':       #AlleleID  label UniProt                                        Name
+             │             │       6        227921      1  O1...
+             │             └ (<function assign at 0x2b537e37dcf0>, '__dask_blockwise__0', '__dask_blockwise__1', (<function apply at 0x2b537d983400>, <fun...
+             └ <function _execute_task at 0x2b537da43640>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/core.py", line 119, in _execute_task
+    return func(*(_execute_task(a, cache) for a in args))
+           │      │                │               └ ('__dask_blockwise__0', '__dask_blockwise__1', (<function apply at 0x2b537d983400>, <function apply_and_enforce at 0x2b537e3a...
+           │      │                └ {'__dask_blockwise__0':       #AlleleID  label UniProt                                        Name
+           │      │                  6        227921      1  O1...
+           │      └ <function _execute_task at 0x2b537da43640>
+           └ <function assign at 0x2b537e37dcf0>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/core.py", line 119, in <genexpr>
+    return func(*(_execute_task(a, cache) for a in args))
+                  │             │  │          └ (<function apply at 0x2b537d983400>, <function apply_and_enforce at 0x2b537e3a7400>, ['__dask_blockwise__0'], (<class 'dict'>...
+                  │             │  └ {'__dask_blockwise__0':       #AlleleID  label UniProt                                        Name
+                  │             │    6        227921      1  O1...
+                  │             └ (<function apply at 0x2b537d983400>, <function apply_and_enforce at 0x2b537e3a7400>, ['__dask_blockwise__0'], (<class 'dict'>...
+                  └ <function _execute_task at 0x2b537da43640>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/core.py", line 119, in _execute_task
+    return func(*(_execute_task(a, cache) for a in args))
+           │      │                │               └ (<function apply_and_enforce at 0x2b537e3a7400>, ['__dask_blockwise__0'], (<class 'dict'>, [['_func', <function gen_mutant_fr...
+           │      │                └ {'__dask_blockwise__0':       #AlleleID  label UniProt                                        Name
+           │      │                  6        227921      1  O1...
+           │      └ <function _execute_task at 0x2b537da43640>
+           └ <function apply at 0x2b537d983400>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/utils.py", line 73, in apply
+    return func(*args, **kwargs)
+           │     │       └ {'_func': <function gen_mutant_from_df at 0x2b537de84b80>, '_meta': Series([], dtype: object)}
+           │     └ [      #AlleleID  label UniProt                                        Name
+           │       6        227921      1  O15020  NM_006946.3(SPTBN...
+           └ <function apply_and_enforce at 0x2b537e3a7400>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/dataframe/core.py", line 7006, in apply_and_enforce
+    df = func(*args, **kwargs)
+         │     │       └ {}
+         │     └ (      #AlleleID  label UniProt                                        Name
+         │       6        227921      1  O15020  NM_006946.3(SPTBN...
+         └ <function gen_mutant_from_df at 0x2b537de84b80>
+
+  File "/scratch/user/zshuying/ppi_mutation/scripts/utils.py", line 424, in gen_mutant_from_df
+    return [gen_mutant_one_row(uniprot, name) for uniprot, name in zip(df['UniProt'], df['Name'])]
+            │                                                          │              └       #AlleleID  label UniProt                                        Name
+            │                                                          │                6        227921      1  O15020  NM_006946.3(SPTBN2...
+            │                                                          └       #AlleleID  label UniProt                                        Name
+            │                                                            6        227921      1  O15020  NM_006946.3(SPTBN2...
+            └ <function gen_mutant_one_row at 0x2b537d86ec20>
+
+> File "/scratch/user/zshuying/ppi_mutation/scripts/utils.py", line 424, in <listcomp>
+    return [gen_mutant_one_row(uniprot, name) for uniprot, name in zip(df['UniProt'], df['Name'])]
+            │                  │        │         │        └ 'NM_006946.3(SPTBN2):c.470T>C (p.Ile157Thr)'
+            │                  │        │         └ 'O15020'
+            │                  │        └ 'NM_006946.3(SPTBN2):c.470T>C (p.Ile157Thr)'
+            │                  └ 'O15020'
+            └ <function gen_mutant_one_row at 0x2b537d86ec20>
+
+  File "/scratch/user/zshuying/ppi_mutation/scripts/utils.py", line 411, in gen_mutant_one_row
+    seq = get_sequence_from_uniprot_id(uniprot_id)
+          │                            └ 'O15020'
+          └ <function get_sequence_from_uniprot_id at 0x2b537d86e680>
+
+  File "/scratch/user/zshuying/ppi_mutation/scripts/utils.py", line 311, in get_sequence_from_uniprot_id
+    contnt = requests.get(url).text
+             │        │   └ 'https://rest.uniprot.org/uniprotkb/O15020.fasta'
+             │        └ <function get at 0x2b53781f1240>
+             └ <module 'requests' from '/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/requests/__init__.py'>
+
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/requests/api.py", line 73, in get
+    return request("get", url, params=params, **kwargs)
+           │              │           │         └ {}
+           │              │           └ None
+           │              └ 'https://rest.uniprot.org/uniprotkb/O15020.fasta'
+           └ <function request at 0x2b53781a1990>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+           │       │              │           │      └ {'params': None}
+           │       │              │           └ 'https://rest.uniprot.org/uniprotkb/O15020.fasta'
+           │       │              └ 'get'
+           │       └ <function Session.request at 0x2b53781f09d0>
+           └ <requests.sessions.Session object at 0x2b537e458fa0>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+           │    │    │       └ {'timeout': None, 'allow_redirects': True, 'proxies': OrderedDict([('http', 'http://10.76.5.24:8080'), ('https', 'http://10.7...
+           │    │    └ <PreparedRequest [GET]>
+           │    └ <function Session.send at 0x2b53781f0e50>
+           └ <requests.sessions.Session object at 0x2b537e458fa0>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+        │       │    │          └ {'timeout': None, 'proxies': OrderedDict([('http', 'http://10.76.5.24:8080'), ('https', 'http://10.76.5.24:8080')]), 'stream'...
+        │       │    └ <PreparedRequest [GET]>
+        │       └ <function HTTPAdapter.send at 0x2b53781f0310>
+        └ <requests.adapters.HTTPAdapter object at 0x2b537e459210>
+  File "/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/requests/adapters.py", line 553, in send
+    raise ConnectTimeout(e, request=request)
+          │                         └ <PreparedRequest [GET]>
+          └ <class 'requests.exceptions.ConnectTimeout'>
+
+requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='rest.uniprot.org', port=443): Max retries exceeded with url: /uniprotkb/O15020.fasta (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x2b537e4599c0>, 'Connection to 10.76.5.24 timed out. (connect timeout=None)'))
+/scratch/user/zshuying/.conda/envs/cpu/lib/python3.10/site-packages/dask/dataframe/core.py:6984: FutureWarning: Meta is not valid, `map_partitions` and `map_overlap` expects output to be a pandas object. Try passing a pandas object as meta or a dict or tuple representing the (name, dtype) of the columns. In the future the meta you passed will not work.
+  warnings.warn(
