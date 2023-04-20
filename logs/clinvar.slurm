@@ -1,9 +1,14 @@
-#!/bin/bash 
+#!/bin/bash
+
+
+
+
+#SBATCH --ntasks=1 
+#SBATCH --cpus-per-task=24 
 
 #SBATCH --export=NONE                #Do not propagate environment
 #SBATCH --get-user-env=L             #Replicate login environment
 #SBATCH --job-name=clinvar
-#SBATCH --ntasks=28
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=zshuying@tamu.edu
 #SBATCH --mem=30G
@@ -18,6 +23,6 @@ conda activate shuying
 python --version
 cd $SCRATCH/ppi_mutation/scripts
 
-srun --export=ALL python /scratch/user/zshuying/ppi_mutation/scripts/clinvar_variant_sum.py
+srun --export=ALL python /scratch/user/zshuying/ppi_mutation/scripts/esm/ESM_baseline0.py
 
 
