@@ -26,6 +26,7 @@ sys.path.append(top_path)
 script_path, data_path, logging_path= os.path.join(top_path,'scripts'),\
     os.path.join(top_path,'data'),\
     os.path.join(top_path,'logs')
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 from scripts.utils import *
 from scripts.esm.model import *
 
@@ -45,17 +46,17 @@ if __name__ == '__main__':
 
     print('\n\n\n Defining dataloaders...\n\n\n')
     train_short_dataloader = DataLoader(train_short_set, batch_size=4,
-                            shuffle=True, num_workers=1)
+                            shuffle=True, num_workers=20)
     val_short_dataloader = DataLoader(val_short_set, batch_size=4,
-                                  shuffle=True, num_workers=1)
-    train_medium_dataloader = DataLoader(train_medium_set, batch_size=4,
-                                        shuffle=True, num_workers=10)
-    val_medium_dataloader = DataLoader(val_medium_set, batch_size=4,
-                                      shuffle=True, num_workers=10)
-    train_long_dataloader = DataLoader(train_long_set, batch_size=2,
-                                       shuffle=True, num_workers=10)
-    val_long_dataloader = DataLoader(val_long_set, batch_size=2,
-                                      shuffle=True, num_workers=10)
+                                  shuffle=True, num_workers=20)
+    train_medium_dataloader = DataLoader(train_medium_set, batch_size=2,
+                                        shuffle=True, num_workers=20)
+    val_medium_dataloader = DataLoader(val_medium_set, batch_size=2,
+                                      shuffle=True, num_workers=20)
+    train_long_dataloader = DataLoader(train_long_set, batch_size=1,
+                                       shuffle=True, num_workers=20)
+    val_long_dataloader = DataLoader(val_long_set, batch_size=1,
+                                      shuffle=True, num_workers=20)
 
     esm_mlp=Esm_mlp(mlp_input_dim=320,mlp_hidden_dim=160,mixed_cpu=False)
 
