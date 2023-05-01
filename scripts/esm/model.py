@@ -18,6 +18,7 @@ def find_current_path():
 
     return current
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
+from lightning.pytorch.callbacks import BasePredictionWriter
 
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
@@ -40,7 +41,49 @@ class MLP(nn.Module):
 
 class Esm_infer(pl.LightningModule):
     def __init__(self,esm_model=esm.pretrained.esm2_t6_8M_UR50D(),truncation_len=None):
-        pass
+        super().__init__()
+        self.esm_model, alphabet=esm_model
+        self.batch_converter=alphabet.get_batch_converter()
+        self.alphabet=alphabet
+    def predict_step(self, batch, batch_idx):
+        self.esm_model.eval()
+        torch.cuda.empty_cache()
+
+        idxes,labels,seqs=batch['idx'],batch['label'],batch['seq']
+        batch_sample=list(zip(labels,seqs))
+        del batch
+        batch_labels, batch_strs, batch_tokens=self.batch_converter(batch_sample)
+        batch_labels=torch.stack(batch_labels)
+        batch_tokens=batch_tokens.to(self.device)
+        batch_labels=batch_labels.to(self.device)
+        batch_labels=(batch_labels+1)/2 #so ugly...
+
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        with torch.no_grad():
+            results = self.esm_model(batch_tokens, repr_layers=[6], return_contacts=False)
+            token_representations = results["representations"][6]
+            sequence_representations = []
+        for i, tokens_len in enumerate(batch_lens):
+            sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
+        del token_representations
+        sequence_representations=torch.stack(sequence_representations)
+        return sequence_representations
+
+class CustomWriter(BasePredictionWriter):
+
+    def __init__(self, output_dir, prefix,write_interval="epoch"):
+        super().__init__(write_interval)
+        self.output_dir = output_dir
+        self.prefix=prefix
+
+    def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
+        # this will create N (num processes) files in `output_dir` each containing
+        # the predictions of it's respective rank
+        torch.save(predictions, os.path.join(self.output_dir, f"{self.prefix}_predictions_{trainer.global_rank}.pt"))
+
+        # optionally, you can also save `batch_indices` to get the information about the data index
+        # from your prediction data
+        torch.save(batch_indices, os.path.join(self.output_dir, f"{self.prefix}_batch_indices_{trainer.global_rank}.pt"))
 
 class Esm_mlp(pl.LightningModule):
 
