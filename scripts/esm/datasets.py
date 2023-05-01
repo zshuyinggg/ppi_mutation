@@ -1,3 +1,5 @@
+import copy
+
 import torch
 from torch.utils.data import Dataset
 import torch.utils.data as data
@@ -40,8 +42,8 @@ class ProteinSequence(Dataset):
     label decides only positive samples(1), only negative samples(0), or both (None)
     """
 
-    def __init__(self, clinvar_csv, gen_file_path, gen_file=True,
-                 all_uniprot_id_file='data/single_protein_seq/uniprotids_humap_huri.txt',
+    def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'), gen_file_path=data_path + '/2019_1_sequences_terminated.csv', gen_file=False,
+                 all_uniprot_id_file=os.path.join(data_path,'single_protein_seq/uniprotids_humap_huri.txt'),
                  test_mode=False,
                  transform=None,
                  random_seed=52):
@@ -71,6 +73,25 @@ class ProteinSequence(Dataset):
         if gen_file:self.gen_sequence_file()
         else:self.read_sequence_file()
         self.all_sequences=self.shuffle() #set this to class property to make sure train and val are split on the same indexes
+
+    def cut_seq(self,low,high,discard):
+        self.high=high
+        self.low=low
+        s = ProteinSequence.all_sequences.Seq.str.len()
+        if high is None:
+            high=np.inf
+        if discard:
+            print('Discarded %s sequences which are longer than %s'%(len(ProteinSequence.all_sequences[s>=self.discard_cutoff]),self.discard_cutoff))
+        cond1 = s < self.high
+        cond2 = s >= self.low
+        self.all_sequences = self.ProteinSequence[cond1 & cond2]
+        print('dataset cut to length between %s and %s' %(self.low,self.high))
+        print('sequences count = %s'%self.__len__())
+        print('----------------------------------------------')
+
+    def set_class_seq(self):
+        ProteinSequence.all_sequences=self.all_sequences
+
 
     def read_sequence_file(self):
         if os.path.isfile(self.gen_file_path):
@@ -130,14 +151,107 @@ class ProteinSequence(Dataset):
         return sample
 
     def shuffle(self):
+        print('dataset shuffled')
         return self.all_sequences.sample(frac=1,random_state=self.random_seed)
 
-    def sort(self):
-        s = self.all_sequences.Seq.str.len().sort_values().index
+    def sort(self,ascending=True):
+        s = self.all_sequences.Seq.str.len().sort_values(ascending=ascending).index
         df=self.all_sequences.reindex(s)
         self.all_sequences=df.reset_index(drop=True)
 
         return df
+
+
+def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
+    curSeq=copy.deepcopy(seqDataset)
+    curSeq.all_sequences=seqDataset.dataset.all_sequences.iloc[seqDataset.indices,:] # Subset object produced a bunch of random indices to call the __getitem__ from the original object. we have to match the indices
+    shortSeq,mediumSeq,longSeq=copy.deepcopy(curSeq),copy.deepcopy(curSeq),copy.deepcopy(curSeq)
+
+    s = curSeq.all_sequences.Seq.str.len()
+    if high is None:
+        high=np.inf
+    curSeq.high=high
+    curSeq.medium=medium
+    curSeq.low=low
+    cond1 = s >= low
+    cond2 = s < medium
+    cond3 = s >=medium
+    cond4=s<high
+    cond5=s>=high
+    cond6=s<veryhigh
+    cond7=s>veryhigh
+    if discard:
+        print('Discarded %s sequences which are longer than %s'%(len(curSeq.all_sequences[cond7]),veryhigh))
+    shortSeq.indices = curSeq.all_sequences[cond1 & cond2].index
+    print('short dataset cut to length between %s and %s' %(low,medium))
+    print('sequences count = %s'%shortSeq.__len__())
+    print('----------------------------------------------')
+
+    mediumSeq. indices = curSeq.all_sequences[cond3 & cond4].index
+    print('medium dataset cut to length between %s and %s' %(medium,high))
+    print('sequences count = %s'%mediumSeq.__len__())
+    print('----------------------------------------------')
+
+    longSeq. indices = curSeq.all_sequences[cond5 & cond6].index
+    print('long dataset cut to length between %s and %s' %(high,veryhigh))
+    print('sequences count = %s'%longSeq.__len__())
+    print('----------------------------------------------')
+    if discard:
+        return shortSeq,mediumSeq,longSeq
+    if not discard:
+        extremelongSeq=copy.deepcopy(curSeq)
+        extremelongSeq. indices = curSeq.all_sequences[cond7].index
+        print('extremelong dataset cut to length between %s and %s' %(veryhigh,np.inf))
+        print('sequences count = %s'%extremelongSeq.__len__())
+        print('----------------------------------------------')
+        return shortSeq,mediumSeq,longSeq,extremelongSeq
+
+class ShortSeq(ProteinSequence):
+    def __init__(self,  cutoff=512,*args,**kwargs ):
+        super(ShortSeq,self).__init__(*args,**kwargs)
+        self.cutoff=cutoff
+        self.cut_seq()
+
+    def cut_seq(self):
+        s = self.all_sequences.Seq.str.len()
+        self.all_sequences=self.all_sequences[s<self.cutoff]
+        print('Short dataset cut to length < %s'%self.cutoff)
+        print('sequences count = %s'%self.__len__())
+        print('----------------------------------------------')
+
+
+
+class LongSeq(ShortSeq):
+    def __init__(self, low, high, *args, **kwargs):
+        self.low=low
+        self.high=high
+        super(LongSeq,self).__init__(*args,**kwargs)
+
+    def cut_seq(self):
+        s = self.all_sequences.Seq.str.len()
+        cond1 = s < self.high
+        cond2 = s >= self.low
+        self.all_sequences = self.all_sequences[cond1 & cond2]
+        print('Long dataset cut to length between %s and %s'%(self.low, self.high))
+        print('sequences count = %s'%self.__len__())
+        print('----------------------------------------------')
+
+
+class ExtremeLong(ShortSeq):
+    def __init__(self, discard_cutoff=3000,*args, **kwargs):
+        self.discard_cutoff=3000
+        super(ExtremeLong,self).__init__(*args,**kwargs)
+    def cut_seq(self):
+        s = self.all_sequences.Seq.str.len()
+
+        print('Discarded %s sequences which are longer than %s'%(len(self.all_sequences[s>=self.discard_cutoff]),self.discard_cutoff))
+        cond1 = s < self.discard_cutoff
+        cond2 = s >= self.cutoff
+        self.all_sequences = self.all_sequences[cond1 & cond2]
+        print('Extreme Long dataset cut to length between %s and %s' %(self.cutoff,self.discard_cutoff))
+        print('sequences count = %s'%self.__len__())
+        print('----------------------------------------------')
+
 
 
 
@@ -173,4 +287,5 @@ def split_train_val(dataset,train_val_split=0.8,random_seed=52):
     valid_set_size=len(dataset)-train_set_size
     seed=torch.Generator().manual_seed(random_seed)
     train_set,valid_set=data.random_split(dataset,[train_set_size,valid_set_size],generator=seed)
+    print('Split dataset into train, val with the rate of %s'%train_val_split)
     return train_set,valid_set
