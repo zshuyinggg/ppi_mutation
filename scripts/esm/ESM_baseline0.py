@@ -1,5 +1,5 @@
 import torch
-from pytorch_lightning.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import ModelCheckpoint
 from torch.utils.data import Dataset
 global top_path  # the path of the top_level directory
 global script_path, data_path, logging_path
@@ -44,10 +44,10 @@ if __name__ == '__main__':
                               )
 seq_dataset.sort()
 train_set,valid_set= split_train_val(seq_dataset,train_val_split)
-train_dataloader = DataLoader(train_set, batch_size=24,
-                        shuffle=False, num_workers=10)
-val_dataloader = DataLoader(valid_set, batch_size=24,
-                              shuffle=False, num_workers=10)
+train_dataloader = DataLoader(train_set, batch_size=4,
+                        shuffle=False, num_workers=20)
+val_dataloader = DataLoader(valid_set, batch_size=4,
+                              shuffle=False, num_workers=20)
 esm_mlp=Esm_mlp(mlp_input_dim=320,mlp_hidden_dim=160)
 
 
@@ -55,9 +55,9 @@ early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience
 checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
     dirpath= logging_path,
-    filename='esm_mlp_320_160_bz24_lr1-03_-{epoch:02d}-{val_loss:.2f}'
+    filename='esm_mlp_320_160_bz8_lr1-03_-{epoch:02d}-{val_loss:.2f}'
 )
-trainer=pl.Trainer(max_epochs=10, accelerator="gpu",default_root_dir=logging_path, callbacks=[early_stop_callback])
+trainer=pl.Trainer(max_epochs=10, accelerator="gpu",default_root_dir=logging_path, callbacks=[checkpoint_callback,early_stop_callback])
 trainer.fit(model=esm_mlp,train_dataloaders=train_dataloader,val_dataloaders=val_dataloader)
 
 #checkpoint

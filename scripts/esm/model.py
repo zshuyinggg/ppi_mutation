@@ -66,7 +66,7 @@ class Esm_mlp(pl.LightningModule):
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         batch_labels=(batch_labels+1)/2 #so ugly...
         # for sequences that are longer than 512, infer them on cpu
-        if True in (batch_lens>512):
+        if True in (batch_lens>900):
             sequence_representations=self.infer_on_cpu(batch_tokens)
 
         else:
