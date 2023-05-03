@@ -1,4 +1,7 @@
 /data/*
+.vscode/*
+/.vscode/*
+/.idea/*
 .idea/*
 
 !/data/*.py

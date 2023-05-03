@@ -69,9 +69,11 @@ class ProteinSequence(Dataset):
         self.all_ppi_uniprot_ids = eval(open(all_uniprot_id_file).readline())
         self.clinvar = self.clinvar[
             [uniprot in self.all_ppi_uniprot_ids for uniprot in self.clinvar['UniProt'].tolist()]]
-        if test_mode: self.clinvar=self.clinvar.loc[:100,:]
+        if test_mode: 
+            self.clinvar=self.clinvar.loc[:10,:]
         if gen_file:self.gen_sequence_file()
         else:self.read_sequence_file()
+        if test_mode:self.all_sequences=self.all_sequences[:10]
         self.all_sequences=self.shuffle() #set this to class property to make sure train and val are split on the same indexes
 
     def cut_seq(self,low,high,discard):
@@ -97,6 +99,7 @@ class ProteinSequence(Dataset):
         if os.path.isfile(self.gen_file_path):
             self.all_sequences = pd.read_csv(self.gen_file_path)
             self.all_sequences=self.all_sequences[self.all_sequences['Seq'].apply(lambda x: not('Error' in x))]
+            self.all_sequences.reset_index(drop=True, inplace=True)
         else: self.gen_sequence_file()
 
     def gen_sequence_file(self) -> object:

@@ -32,34 +32,44 @@ from scripts.esm.model import *
 from scripts.esm.datasets import *
 import pandas as pd
 
-train_val_split=0.8
 if __name__ == '__main__':
-    proSeq=ProteinSequence()
-    train_set,val_set= split_train_val(proSeq,0.9)
+    proSeq=ProteinSequence(test_mode=False)
+    train_set,_= split_train_val(proSeq,1)
 
-    print('Splitting training set by length\n=======================')
+    print('Splitting all data set by length\n=======================')
     train_short_set,train_medium_set,train_long_set=cut_seq(train_set,0,512,1024,3000,True)
-    print('Splitting validation set by length\n=======================')
-    val_short_set,val_medium_set,val_long_set=cut_seq(val_set,0,512,1024,3000,True)
 
 
     print('\n\n\n Defining dataloaders...\n\n\n')
-    train_short_dataloader = DataLoader(train_short_set, batch_size=4,
-                            shuffle=False, num_workers=1)
-    val_short_dataloader = DataLoader(val_short_set, batch_size=4,
-                                  shuffle=False, num_workers=1)
-    train_medium_dataloader = DataLoader(train_medium_set, batch_size=2,
-                                        shuffle=False, num_workers=10)
-    val_medium_dataloader = DataLoader(val_medium_set, batch_size=2,
-                                      shuffle=False, num_workers=10)
+    train_short_dataloader = DataLoader(train_short_set, batch_size=2,
+                            shuffle=False, num_workers=20)
+
+    train_medium_dataloader = DataLoader(train_medium_set, batch_size=1,
+                                        shuffle=False, num_workers=20)
+
     train_long_dataloader = DataLoader(train_long_set, batch_size=1,
-                                       shuffle=False, num_workers=10)
-    val_long_dataloader = DataLoader(val_long_set, batch_size=1,
-                                      shuffle=False, num_workers=10)
+                                       shuffle=False, num_workers=20)
+
 
     esm=Esm_infer()
-    pred_train_short_writer=CustomWriter(output_dir=data_path, write_interval="epoch")
-    trainer=pl.Trainer(accelerator="gpu", strategy="ddp", devices=1, callbacks=[pred_train_short_writer])
-    trainer.predict(esm,return_predictions=False)
+
+    print('Starting training for short seqences....')
+    pred_train_short_writer=CustomWriter(output_dir=data_path, prefix='all_short',write_interval="epoch")
+    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=6, strategy="ddp",  callbacks=[pred_train_short_writer])
+    trainer.predict(esm,train_short_dataloader ,return_predictions=False)
+
+
+
+    print('Starting training for medium seqences....')
+    pred_train_medium_writer=CustomWriter(output_dir=data_path, prefix='all_medium',write_interval="epoch")
+    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=6, strategy="ddp",  callbacks=[pred_train_medium_writer])
+    trainer.predict(esm,train_medium_dataloader ,return_predictions=False)
+
+
+
+    print('Starting training for long seqences....')
+    pred_train_long_writer=CustomWriter(output_dir=data_path, prefix='all_long',write_interval="epoch")
+    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=6, strategy="ddp",  callbacks=[pred_train_long_writer])
+    trainer.predict(esm,train_long_dataloader ,return_predictions=False)
 
 

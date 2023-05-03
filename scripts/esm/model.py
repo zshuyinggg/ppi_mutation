@@ -45,11 +45,13 @@ class Esm_infer(pl.LightningModule):
         self.esm_model, alphabet=esm_model
         self.batch_converter=alphabet.get_batch_converter()
         self.alphabet=alphabet
+        self.batch_dic={}
     def predict_step(self, batch, batch_idx):
         self.esm_model.eval()
         torch.cuda.empty_cache()
 
         idxes,labels,seqs=batch['idx'],batch['label'],batch['seq']
+        self.batch_dic[batch_idx]=labels.to('cpu')
         batch_sample=list(zip(labels,seqs))
         del batch
         batch_labels, batch_strs, batch_tokens=self.batch_converter(batch_sample)
@@ -67,6 +69,7 @@ class Esm_infer(pl.LightningModule):
             sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
         del token_representations
         sequence_representations=torch.stack(sequence_representations)
+        torch.cuda.empty_cache()
         return sequence_representations
 
 class CustomWriter(BasePredictionWriter):
@@ -79,14 +82,23 @@ class CustomWriter(BasePredictionWriter):
     def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
         # this will create N (num processes) files in `output_dir` each containing
         # the predictions of it's respective rank
-        torch.save(predictions, os.path.join(self.output_dir, f"{self.prefix}_predictions_{trainer.global_rank}.pt"))
+        torch.save(torch.vstack(predictions), os.path.join(self.output_dir, f"{self.prefix}_predictions_{trainer.global_rank}.pt"))
 
         # optionally, you can also save `batch_indices` to get the information about the data index
         # from your prediction data
-        torch.save(batch_indices, os.path.join(self.output_dir, f"{self.prefix}_batch_indices_{trainer.global_rank}.pt"))
+        # torch.save(batch_indices, os.path.join(self.output_dir, f"{self.prefix}_batch_indices_{trainer.global_rank}.pt"))
+        current_ds=trainer.predict_dataloaders.dataset.dataset
+        ds_indices=trainer.predict_dataloaders.dataset.indices[np.hstack(batch_indices[0])]
+        vf=np.vectorize(lambda x:current_ds[x]['label'])
+        labels=vf(ds_indices)
+        torch.save(labels,os.path.join(self.output_dir, f"{self.prefix}_labels_{trainer.global_rank}.pt"))
+    # def write_on_batch_end(self, trainer, prediction, batch, batch_idx, dataloader_idx #TODO: WHAT IS THIS
+    # ):
+    #     torch.save({"prediction":prediction,"label":batch['label']}, os.path.join(self.output_dir, dataloader_idx, f"{batch_idx}.pt"))
+        
+
 
 class Esm_mlp(pl.LightningModule):
-
     def __init__(self, mlp_input_dim, mlp_hidden_dim, esm_model=esm.pretrained.esm2_t6_8M_UR50D(),truncation_len=None,mixed_cpu=True ):
         super().__init__()
         self.save_hyperparameters()
