@@ -100,7 +100,6 @@ class Esm_infer(pl.LightningModule):
         sequence_representations=torch.stack(sequence_representations)
         torch.cuda.empty_cache()
         return sequence_representations
-<<<<<<< HEAD
 
 class CustomWriter(BasePredictionWriter):
 
@@ -109,16 +108,6 @@ class CustomWriter(BasePredictionWriter):
         self.output_dir = output_dir
         self.prefix=prefix
 
-=======
-
-class CustomWriter(BasePredictionWriter):
-
-    def __init__(self, output_dir, prefix,write_interval="epoch"):
-        super().__init__(write_interval)
-        self.output_dir = output_dir
-        self.prefix=prefix
-
->>>>>>> 6d56cd9412eb52f5aba1c9dfa6396f3ce3d5246f
     def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
         # this will create N (num processes) files in `output_dir` each containing
         # the predictions of it's respective rank
