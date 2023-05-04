@@ -32,13 +32,26 @@ from scripts.esm.model import *
 
 from scripts.esm.datasets import *
 import pandas as pd
+if __name__ == '__main__':
+  Embeddings=EsmMeanEmbeddings(if_initial_merge=False)
+  train_set,val_set= split_train_val(Embeddings,0.8)
+  mlp=myMLP(input_dim=320,hidden_dim=160)
+  train_dataloader = DataLoader(train_set, batch_size=24,
+                                      shuffle=True, num_workers=20)
+  val_dataloader = DataLoader(val_set, batch_size=24,
+                                    shuffle=False, num_workers=20)
 
-proSeq=ProteinSequence()
-train_set,val_set= split_train_val(proSeq,0.9)
+  early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=5, verbose=False, mode="max")
+checkpoint_callback = ModelCheckpoint(
+ monitor='val_auroc',
+ dirpath= logging_path,
+ filename='mlp_320_160_bz24_lr1-03_-{epoch:02d}-{val_loss:.2f}'
+)
 
-print('Splitting training set by length\n=======================')
-train_short_set,train_medium_set,train_long_set=cut_seq(train_set,0,512,1024,3000,True)
-print('Splitting validation set by length\n=======================')
-val_short_set,val_medium_set,val_long_set=cut_seq(val_set,0,512,1024,3000,True)
+
+
+trainer=pl.Trainer(max_epochs=100, accelerator="gpu",default_root_dir=logging_path, callbacks=[early_stop_callback])
+print('=========Start to train mlp============\n------------------------')
+trainer.fit(model=mlp,train_dataloaders=train_dataloader,val_dataloaders=val_dataloader)
 
 

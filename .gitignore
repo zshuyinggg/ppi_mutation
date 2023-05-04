@@ -1,11 +1,17 @@
 /data/*
+.vscode/*
+/.vscode/*
+/.idea/*
 .idea/*
-
+/logs/lightning_logs/*/*.pt
+/logs/lightning_logs/*/*.pth
+/logs/lightning_logs/*/*.ckpt
 !/data/*.py
 !/data/*.ipynb
 !/data/*.md
 /trained_models
-
+*.pt
+*.pth
 /scripts/__pycache__/*
 
 

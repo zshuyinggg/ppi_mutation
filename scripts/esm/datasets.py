@@ -69,9 +69,11 @@ class ProteinSequence(Dataset):
         self.all_ppi_uniprot_ids = eval(open(all_uniprot_id_file).readline())
         self.clinvar = self.clinvar[
             [uniprot in self.all_ppi_uniprot_ids for uniprot in self.clinvar['UniProt'].tolist()]]
-        if test_mode: self.clinvar=self.clinvar.loc[:100,:]
+        if test_mode: 
+            self.clinvar=self.clinvar.loc[:10,:]
         if gen_file:self.gen_sequence_file()
         else:self.read_sequence_file()
+        if test_mode:self.all_sequences=self.all_sequences[:10]
         self.all_sequences=self.shuffle() #set this to class property to make sure train and val are split on the same indexes
 
     def cut_seq(self,low,high,discard):
@@ -97,6 +99,7 @@ class ProteinSequence(Dataset):
         if os.path.isfile(self.gen_file_path):
             self.all_sequences = pd.read_csv(self.gen_file_path)
             self.all_sequences=self.all_sequences[self.all_sequences['Seq'].apply(lambda x: not('Error' in x))]
+            self.all_sequences.reset_index(drop=True, inplace=True)
         else: self.gen_sequence_file()
 
     def gen_sequence_file(self) -> object:
@@ -206,51 +209,66 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
         print('----------------------------------------------')
         return shortSeq,mediumSeq,longSeq,extremelongSeq
 
-class ShortSeq(ProteinSequence):
-    def __init__(self,  cutoff=512,*args,**kwargs ):
-        super(ShortSeq,self).__init__(*args,**kwargs)
-        self.cutoff=cutoff
-        self.cut_seq()
-
-    def cut_seq(self):
-        s = self.all_sequences.Seq.str.len()
-        self.all_sequences=self.all_sequences[s<self.cutoff]
-        print('Short dataset cut to length < %s'%self.cutoff)
-        print('sequences count = %s'%self.__len__())
-        print('----------------------------------------------')
+class EsmMeanEmbeddings(Dataset):
+    def __init__(self,if_initial_merge=False,dirpath=data_path):
+        self.if_initial_merge=if_initial_merge
+        self.dirpath=data_path
+        if self.if_initial_merge:self.initial_merge()
+        self.read_file()
 
 
+    def initial_merge(self):
+        pattern = r'.*predictions.*'
+        # Compile the regular expression
+        regex = re.compile(pattern)
+        # Loop over all files in the directory
+        preds=[]
+        for file in os.listdir(self.dirpath):
+            if os.path.isfile(os.path.join(self.dirpath, file)):
+                print(file)
+                # Check if the file matches the pattern
+                if regex.search(file):
+                    pred=torch.load(os.path.join(self.dirpath, file))
+                    preds.append(pred)
+                    del pred
+                    print('file %s has been loaded '%file)
+        preds=torch.vstack(preds)
+        print('predictions merged')
+        torch.save(preds,os.path.join(data_path,'2019_all_esm_embeddings.pt'))
+        print('predictions saved')
+        pattern = '.*_labels_[0-9]+.*'
+        # Compile the regular expression
+        regex = re.compile(pattern)
+        # Loop over all files in the directory
+        preds=[]
+        for file in os.listdir(self.dirpath):
+            if os.path.isfile(os.path.join(self.dirpath, file)):
+                # Check if the file matches the pattern
+                if regex.search(file):
+                    pred=torch.load(os.path.join(self.dirpath, file))
+                    preds.append(pred)
+                    del pred
+                    print('file %s has been loaded '%file)
 
-class LongSeq(ShortSeq):
-    def __init__(self, low, high, *args, **kwargs):
-        self.low=low
-        self.high=high
-        super(LongSeq,self).__init__(*args,**kwargs)
+        preds=np.concatenate(preds,axis=0)
+        print('labels merged')
+        torch.save(preds,os.path.join(data_path,'2019_all_labels_for_embeddings.pt'))
+        print('labels saved')
+    def read_file(self):
 
-    def cut_seq(self):
-        s = self.all_sequences.Seq.str.len()
-        cond1 = s < self.high
-        cond2 = s >= self.low
-        self.all_sequences = self.all_sequences[cond1 & cond2]
-        print('Long dataset cut to length between %s and %s'%(self.low, self.high))
-        print('sequences count = %s'%self.__len__())
-        print('----------------------------------------------')
+        self.embeddings=torch.load(os.path.join(data_path,'2019_all_esm_embeddings.pt'))
+        self.labels=torch.load(os.path.join(data_path,'2019_all_labels_for_embeddings.pt'))
+        print(self.embeddings.shape)
+        print(self.labels.shape)
+        self.labels=self.labels+1/2
 
+    def __len__(self):
+        assert len(self.labels)==len(self.embeddings)
+        return len(self.labels)
+    def __getitem__(self, idx):
+        return {'embedding':self.embeddings[idx,:],
+                'label':self.labels[idx]}
 
-class ExtremeLong(ShortSeq):
-    def __init__(self, discard_cutoff=3000,*args, **kwargs):
-        self.discard_cutoff=3000
-        super(ExtremeLong,self).__init__(*args,**kwargs)
-    def cut_seq(self):
-        s = self.all_sequences.Seq.str.len()
-
-        print('Discarded %s sequences which are longer than %s'%(len(self.all_sequences[s>=self.discard_cutoff]),self.discard_cutoff))
-        cond1 = s < self.discard_cutoff
-        cond2 = s >= self.cutoff
-        self.all_sequences = self.all_sequences[cond1 & cond2]
-        print('Extreme Long dataset cut to length between %s and %s' %(self.cutoff,self.discard_cutoff))
-        print('sequences count = %s'%self.__len__())
-        print('----------------------------------------------')
 
 
 
