@@ -2,42 +2,24 @@ GPU available: True (cuda), used: True
 TPU available: False, using: 0 TPU cores
 IPU available: False, using: 0 IPUs
 HPU available: False, using: 0 HPUs
-Initializing distributed: GLOBAL_RANK: 0, MEMBER: 1/12
-Initializing distributed: GLOBAL_RANK: 1, MEMBER: 2/12
-Initializing distributed: GLOBAL_RANK: 5, MEMBER: 6/12
-Initializing distributed: GLOBAL_RANK: 4, MEMBER: 5/12
-Initializing distributed: GLOBAL_RANK: 6, MEMBER: 7/12
-Initializing distributed: GLOBAL_RANK: 9, MEMBER: 10/12
-Initializing distributed: GLOBAL_RANK: 7, MEMBER: 8/12
-Initializing distributed: GLOBAL_RANK: 10, MEMBER: 11/12
-Initializing distributed: GLOBAL_RANK: 8, MEMBER: 9/12
-Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/12
-Initializing distributed: GLOBAL_RANK: 2, MEMBER: 3/12
-Initializing distributed: GLOBAL_RANK: 11, MEMBER: 12/12
+Initializing distributed: GLOBAL_RANK: 5, MEMBER: 6/6
+Initializing distributed: GLOBAL_RANK: 1, MEMBER: 2/6
+Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/6
+Initializing distributed: GLOBAL_RANK: 0, MEMBER: 1/6
+Initializing distributed: GLOBAL_RANK: 2, MEMBER: 3/6
+Initializing distributed: GLOBAL_RANK: 4, MEMBER: 5/6
 ----------------------------------------------------------------------------------------------------
 distributed_backend=nccl
-All distributed processes registered. Starting with 12 processes
+All distributed processes registered. Starting with 6 processes
 ----------------------------------------------------------------------------------------------------
 
 You are using a CUDA device ('NVIDIA A40') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
 SLURM auto-requeueing enabled. Setting signal handlers.
 SLURM auto-requeueing enabled. Setting signal handlers.
 SLURM auto-requeueing enabled. Setting signal handlers.
@@ -51,22 +33,10 @@ HPU available: False, using: 0 HPUs
 You are using a CUDA device ('NVIDIA A40') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
 LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
+LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 SLURM auto-requeueing enabled. Setting signal handlers.
 SLURM auto-requeueing enabled. Setting signal handlers.
 SLURM auto-requeueing enabled. Setting signal handlers.
@@ -80,22 +50,10 @@ HPU available: False, using: 0 HPUs
 You are using a CUDA device ('NVIDIA A40') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
 LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
 LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
-SLURM auto-requeueing enabled. Setting signal handlers.
 SLURM auto-requeueing enabled. Setting signal handlers.
 SLURM auto-requeueing enabled. Setting signal handlers.
 SLURM auto-requeueing enabled. Setting signal handlers.

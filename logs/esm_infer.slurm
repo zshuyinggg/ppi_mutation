@@ -8,7 +8,7 @@
 #SBATCH --mem=200G
 #SBATCH --time=10:00:00
 #SBATCH --error=esm_infer.err --output=esm_infer.out
-#SBATCH --nodes=6
+#SBATCH --nodes=3
 #SBATCH --cpus-per-task=20
 #SBATCH --partition=gpu-a40
 #SBATCH --gres=gpu:2
