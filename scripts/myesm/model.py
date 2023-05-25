@@ -2,13 +2,14 @@ import torch
 from torch.utils.data import Dataset
 global top_path  # the path of the top_level directory
 global script_path, data_path, logging_path
+from transformers import AutoTokenizer, EsmForSequenceClassification
 import os, sys
 from torch.utils.data import DataLoader
 from torch import optim, nn, utils, Tensor
 import lightning.pytorch as pl
 import esm
-from torchmetrics.classification import BinaryAUROC
-
+from torchmetrics.classification import BinaryAUROC, MulticlassAUROC
+import re
 def find_current_path():
     if getattr(sys, 'frozen', False):
         # The application is frozen
@@ -25,6 +26,38 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
 from scripts.utils import *
+
+class hfESM(pl.LightningModule):
+    def __init__(self,model="esm2_t6_8M_UR50D",num_labels=3):
+        super().__init__()
+        self.model=EsmForSequenceClassification.from_pretrained("facebook/"+model, num_labels=num_labels)
+        self.model.max_position_embeddings=2048
+        self.num_labels=num_labels
+        self.esm_model=model
+        self.tokenizer=AutoTokenizer.from_pretrained("facebook/"+model)
+
+    # def forward(self,**inputs):
+    #     return self.model(**inputs)
+    
+    def training_step(self,batch,batch_idx):
+        labels,seqs=batch['label'].long(),batch['seq']
+        seqs=self.tokenizer(seqs,padding=True,  return_tensors="pt").input_ids.to(labels)
+        loss=self.model(seqs,labels=labels).loss
+        self.log('train_loss',loss,on_step=True,on_epoch=True,sync_dist=True)
+        return loss
+
+    def validation_step(self,batch,batch_idx):
+        labels,seqs=batch['label'].long(),batch['seq']
+        seqs=self.tokenizer(seqs,padding=True,  return_tensors="pt").input_ids.to(labels)
+        results=self.model(seqs,labels=labels)
+        loss,logits=results['loss'],results['logits']
+        preds=torch.argmax(logits,axis=1)
+        self.log('val_loss',loss,on_step=True,on_epoch=True,sync_dist=True)
+        return {"loss":loss, "preds":preds, "labels":labels}
+
+    def configure_optimizers(self,lr=1e-8) :
+        optimizer=optim.Adam(self.parameters(),lr=lr)
+        return optimizer
 
 
 class myMLP(pl.LightningModule):
@@ -94,8 +127,8 @@ class Esm_infer(pl.LightningModule):
 
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         with torch.no_grad():
-            results = self.esm_model(batch_tokens, repr_layers=[6], return_contacts=False)
-            token_representations = results["representations"][6]
+            results = self.esm_model(batch_tokens, repr_layers=[34], return_contacts=False)
+            token_representations = results["representations"][34]
             sequence_representations = []
         for i, tokens_len in enumerate(batch_lens):
             sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
@@ -267,10 +300,9 @@ class Esm_mlp(pl.LightningModule):
         self.esm_model.to(device=self.device)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         # batch_tokens=batch_tokens.to(device=self.device)
-        with torch.no_grad():
-            results = self.esm_model(batch_tokens, repr_layers=[6], return_contacts=False)
-            token_representations = results["representations"][6]
-            sequence_representations = []
+        results = self.esm_model(batch_tokens, repr_layers=[6], return_contacts=False)
+        token_representations = results["representations"][6]
+        sequence_representations = []
         for i, tokens_len in enumerate(batch_lens):
             sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
         del token_representations
@@ -284,3 +316,113 @@ class Esm_mlp(pl.LightningModule):
 
 
 
+class Esm_finetune(pl.LightningModule):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12):
+        super().__init__()
+        self.save_hyperparameters()
+        self.esm_model, alphabet=esm_model
+        self.batch_converter=alphabet.get_batch_converter()
+        self.alphabet=alphabet
+        self.proj=nn.Sequential(
+            nn.Linear(esm_model_dim,n_class),
+            nn.Softmax()
+        )
+        self.unfreeze_n_layers=unfreeze_n_layers
+        self.repr_layers=repr_layers
+        self.freeze_layers()
+        self.auroc=MulticlassAUROC(num_classes=3)
+
+    def freeze_layers(self):
+        num=self.repr_layers-self.unfreeze_n_layers
+        for layer in self.esm_model.named_parameters():
+            if 'layers' in layer[0] and int(layer[0].split('.')[1])<num:
+                layer[1].requires_grad=False
+                print('layer %s is frozen'%layer[0])
+
+    def training_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        idxes,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
+        batch_sample=list(zip(labels,seqs))
+        del batch
+        batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
+        batch_tokens=batch_tokens.to(self.device)
+        # print(batch_tokens.shape)
+        batch_labels=torch.stack(batch_labels)
+        batch_labels=batch_labels.to(self.device)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        sequence_representations=self.train_mul_gpu(batch_tokens)
+        y=self.proj(sequence_representations.float().to(self.device))
+        loss=nn.functional.cross_entropy(y,batch_labels)
+        self.log('train_loss',loss)
+        torch.cuda.empty_cache()
+        train_auroc=self.auroc(y,batch_labels)
+        self.log('train_auroc',train_auroc)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        self.esm_model.eval()
+        self.proj.eval()
+        idxes,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
+        batch_sample=list(zip(labels,seqs))
+        del batch
+        batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
+        batch_tokens=batch_tokens.to(self.device)
+        batch_labels=torch.stack(batch_labels)
+        batch_labels=batch_labels.to(self.device)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        sequence_representations=self.train_mul_gpu(batch_tokens)
+        y=self.proj(sequence_representations.float().to(self.device))
+        loss=nn.functional.cross_entropy(y,batch_labels)
+        self.log('val_loss',loss)
+        val_auroc=self.auroc(y,batch_labels)
+        self.log('val_auroc',val_auroc)
+        torch.cuda.empty_cache()
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        self.esm_model.eval()
+        self.proj.eval()
+        idxes,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
+        batch_sample=list(zip(labels,seqs))
+        del batch
+        batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
+        batch_tokens=batch_tokens.to(self.device)
+        batch_labels=torch.stack(batch_labels)
+        batch_labels=batch_labels.to(self.device)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        sequence_representations=self.train_mul_gpu(batch_tokens)
+        y=self.proj(sequence_representations.float().to(self.device))
+        loss=nn.functional.cross_entropy(y,batch_labels)
+        
+        self.log('train_ce_loss',loss)
+        torch.cuda.empty_cache()
+        return loss
+
+    def configure_optimizers(self,lr=1e-6) :
+        optimizer=optim.Adam(self.parameters(),lr=lr)
+        return optimizer
+
+    def train_mul_gpu(self,batch_tokens):
+        torch.cuda.empty_cache()
+        self.esm_model.to(device=self.device)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        # batch_tokens=batch_tokens.to(device=self.device)
+        results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
+        token_representations = results["representations"][self.repr_layers]
+        sequence_representations = []
+        for i, tokens_len in enumerate(batch_lens):
+            sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
+        del token_representations
+        torch.cuda.empty_cache()
+        sequence_representations=torch.stack(sequence_representations)
+        return sequence_representations
+    
+
+
+class Esm_finetune_delta(pl.LightningModule):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12):
+        super().__init__(esm_model,esm_model_dim,n_class,truncation_len,unfreeze_n_layers,repr_layers)
+
+        

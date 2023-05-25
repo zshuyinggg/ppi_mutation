@@ -51,25 +51,25 @@ if __name__ == '__main__':
                                        shuffle=False, num_workers=20)
 
 
-    esm=Esm_infer()
+    esm=Esm_infer(esm_model=esm.pretrained.esm1_t34_670M_UR50S())
 
     print('Starting training for short seqences....')
-    pred_train_short_writer=CustomWriter(output_dir=data_path, prefix='all_short',write_interval="epoch")
-    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=3, strategy="ddp",  callbacks=[pred_train_short_writer])
+    pred_train_short_writer=CustomWriter(output_dir=os.path.join(data_path,'esm1_t34_670M_UR50S'), prefix='all_short',write_interval="epoch")
+    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=6, strategy="ddp",  callbacks=[pred_train_short_writer])
     trainer.predict(esm,train_short_dataloader ,return_predictions=False)
 
 
 
     print('Starting training for medium seqences....')
-    pred_train_medium_writer=CustomWriter(output_dir=data_path, prefix='all_medium',write_interval="epoch")
-    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=3, strategy="ddp",  callbacks=[pred_train_medium_writer])
+    pred_train_medium_writer=CustomWriter(output_dir=os.path.join(data_path,'esm1_t34_670M_UR50S'), prefix='all_medium',write_interval="epoch")
+    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=6, strategy="ddp",  callbacks=[pred_train_medium_writer])
     trainer.predict(esm,train_medium_dataloader ,return_predictions=False)
 
 
 
     print('Starting training for long seqences....')
-    pred_train_long_writer=CustomWriter(output_dir=data_path, prefix='all_long',write_interval="epoch")
-    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=3, strategy="ddp",  callbacks=[pred_train_long_writer])
+    pred_train_long_writer=CustomWriter(output_dir=os.path.join(data_path,'esm1_t34_670M_UR50S'), prefix='all_long',write_interval="epoch")
+    trainer=pl.Trainer(accelerator="gpu", devices=2, num_nodes=6, strategy="ddp",  callbacks=[pred_train_long_writer])
     trainer.predict(esm,train_long_dataloader ,return_predictions=False)
 
 

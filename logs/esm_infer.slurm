@@ -8,12 +8,14 @@
 #SBATCH --mem=200G
 #SBATCH --time=10:00:00
 #SBATCH --error=esm_infer.err --output=esm_infer.out
-#SBATCH --nodes=3
+#SBATCH --nodes=6
 #SBATCH --cpus-per-task=20
-#SBATCH --partition=gpu-a40
-#SBATCH --gres=gpu:2
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:a100:2
+ 
 #SBATCH --ntasks-per-node=2
 
+module load WebProxy
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/scratch/user/zshuying/.conda/envs/yuning/lib/
 module load Anaconda3 cuDNN/8.4.1.50-CUDA-11.7.0 GCC/10.3.0
@@ -23,5 +25,5 @@ python --version
 cd $SCRATCH/ppi_mutation/
 which python
 
-srun --export=ALL /scratch/user/zshuying/.conda/envs/yuning/bin/python scripts/esm/ESM_infer.py
+srun --export=ALL /scratch/user/zshuying/.conda/envs/yuning/bin/python scripts/myesm/ESM_infer.py
 

@@ -48,7 +48,7 @@ class ProteinSequence(Dataset):
                  transform=None,
                  random_seed=52):
         """
-
+        labels: 2 wild. 0 negative. 1 possitive
         :param clinvar_csv:
         :param gen_file_path:
         :param gen_file:
@@ -74,8 +74,15 @@ class ProteinSequence(Dataset):
         if gen_file:self.gen_sequence_file()
         else:self.read_sequence_file()
         if test_mode:self.all_sequences=self.all_sequences[:10]
-        self.all_sequences=self.shuffle() #set this to class property to make sure train and val are split on the same indexes
-
+        self.remove_na()
+        self.all_sequences=self.all_sequences.sample(frac=1).reset_index(drop=True)
+        #set this to class property to make sure train and val are split on the same indexes
+        self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=2
+        print(self.all_sequences['Label'].describe())
+    
+    def remove_na(self):
+        self.all_sequences.dropna(inplace=True,ignore_index=True)
+        print('nan removed')
     def cut_seq(self,low,high,discard):
         self.high=high
         self.low=low
@@ -94,6 +101,12 @@ class ProteinSequence(Dataset):
     def set_class_seq(self):
         ProteinSequence.all_sequences=self.all_sequences
 
+    def correct_labels(self):
+
+        # self.all_sequences['Label']=(self.all_sequences['Label']+1)/2
+        self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=2
+        print(self.all_sequences['Label'].describe())
+        # self.all_sequences.to_csv(self.gen_file_path)
 
     def read_sequence_file(self):
         if os.path.isfile(self.gen_file_path):
@@ -101,7 +114,6 @@ class ProteinSequence(Dataset):
             self.all_sequences=self.all_sequences[self.all_sequences['Seq'].apply(lambda x: not('Error' in x))]
             self.all_sequences.reset_index(drop=True, inplace=True)
         else: self.gen_sequence_file()
-
     def gen_sequence_file(self) -> object:
         if self.test_mode:print('-----Test mode on-----------')
         print('Initiating datasets....\n')
@@ -247,7 +259,7 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 class EsmMeanEmbeddings(Dataset):
     def __init__(self,if_initial_merge=False,dirpath=data_path):
         self.if_initial_merge=if_initial_merge
-        self.dirpath=data_path
+        self.dirpath=dirpath
         if self.if_initial_merge:self.initial_merge()
         self.read_file()
 
@@ -305,7 +317,13 @@ class EsmMeanEmbeddings(Dataset):
                 'label':self.labels[idx]}
 
 
-
+class toHF(object):
+    """add space in between each amino acid in order to put it in tokenizer of huggingface"""
+    def __call__(self,sample):
+        sequences=sample['seq']
+        sequences=" ".join(list(sequences))
+        sample['seq']=sequences 
+        return sample
 
 
 class ToTensor(object):
