@@ -354,10 +354,10 @@ class Esm_finetune(pl.LightningModule):
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
         loss=nn.functional.cross_entropy(y,batch_labels)
-        self.log('train_loss',loss,on_epoch=True, sync_dist=True)
+        self.log('train_loss',loss,on_epoch=True,on_step=False,sync_dist=True)
         torch.cuda.empty_cache()
-        train_auroc=self.auroc(y,batch_labels)
-        self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
+        # train_auroc=self.auroc(y,batch_labels)
+        # self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -374,12 +374,24 @@ class Esm_finetune(pl.LightningModule):
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
-        loss=nn.functional.cross_entropy(y,batch_labels)
-        self.log('val_loss',loss, sync_dist=True)
-        val_auroc=self.auroc(y,batch_labels)
-        self.log('val_auroc',val_auroc, sync_dist=True)
+        # loss=nn.functional.cross_entropy(y,batch_labels)
+        # self.log('val_loss',loss, on_epoch=True,sync_dist=True)
+        # val_auroc=self.auroc(y,batch_labels)
+        # self.log('val_auroc',val_auroc, sync_dist=True)
         torch.cuda.empty_cache()
-        return loss
+        print(y.shape,batch_labels.shape)
+        pred=torch.hstack([y,batch_labels])
+        return pred
+
+    def on_validation_epoch_end(self):
+        all_preds=torch.vstack(self.validation_step_outputs)
+        print(all_preds.shape)
+        val_auroc=self.auroc(all_preds[:,0],all_preds[:1])
+        val_loss=nn.functional.cross_entropy((all_preds[:,0],all_preds[:,1]))
+        self.log('val_loss',val_loss)
+        self.log('val_auroc',val_auroc)
+        self.validation_step_outputs.clear()
+
 
     def test_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
@@ -471,7 +483,7 @@ class Esm_finetune_delta(pl.LightningModule):
         self.log('train_loss',loss)
         torch.cuda.empty_cache()
         train_auroc=self.auroc(y,labels)
-        self.log('train_auroc',train_auroc)
+        self.log('train_auroc',train_auroc,prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
 
@@ -496,10 +508,10 @@ class Esm_finetune_delta(pl.LightningModule):
 
         y=self.proj(embs.float().to(self.device))
         loss=nn.functional.cross_entropy(y,labels)
-        self.log('val_loss',loss)
+        self.log('val_loss',loss,prog_bar=True, on_step=False, on_epoch=True)
         torch.cuda.empty_cache()
         val_auroc=self.auroc(y,labels)
-        self.log('val_auroc',val_auroc)
+        self.log('val_auroc',val_auroc,prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
     def get_esm_embedings(self,batch_sample):

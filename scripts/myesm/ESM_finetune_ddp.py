@@ -38,40 +38,10 @@ import pandas as pd
 
 
 
-
-
-
-
-
-train_val_split=0.8
 if __name__ == '__main__':
-    proSeq=ProteinSequence()
-    train_set,val_set= split_train_val(proSeq,0.9)
-
-    print('Splitting training set by length\n=======================')
-    train_short_set,train_medium_set,train_long_set=cut_seq(train_set,0,512,1024,2048,True)
-    print('Splitting validation set by length\n=======================')
-    val_short_set,val_medium_set,val_long_set=cut_seq(val_set,0,512,1024,2048,True)
-
-
-    print('\n\n\n Defining dataloaders...\n\n\n')
-    train_short_dataloader = DataLoader(train_short_set, batch_size=4,
-                            shuffle=True, num_workers=20,drop_last=True)
-    val_short_dataloader = DataLoader(val_short_set, batch_size=4,
-                                  shuffle=False, num_workers=20,drop_last=True)
-    train_medium_dataloader = DataLoader(train_medium_set, batch_size=2,
-                                        shuffle=True, num_workers=20,drop_last=True)
-    val_medium_dataloader = DataLoader(val_medium_set, batch_size=2,
-                                      shuffle=False, num_workers=20,drop_last=True)
-    train_long_dataloader = DataLoader(train_long_set, batch_size=1,
-                                       shuffle=True, num_workers=20,drop_last=True)
-    val_long_dataloader = DataLoader(val_long_set, batch_size=1,
-                                      shuffle=False, num_workers=20,drop_last=True)
-
+    proData=ProteinDataModule(train_val_ratio=0.9,low=0,medium=512,high=1028,veryhigh=1500,discard=True)
     myesm=Esm_finetune(unfreeze_n_layers=8)
     logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="esm2_t12_35M_UR50D",version='lr4-05_unfreeze8')
-
-
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=5, verbose=True, mode="min")
     checkpoint_callback = ModelCheckpoint(
             monitor='val_loss',
@@ -82,21 +52,13 @@ if __name__ == '__main__':
     trainer=pl.Trainer(max_epochs=80, 
                        logger=logger,devices=2, 
                        num_nodes=2, 
-                       limit_train_batches=691,limit_val_batches=74,
+                       # limit_train_batches=691,limit_val_batches=74,
                        strategy=DDPStrategy(find_unused_parameters=True), 
                        accelerator="gpu",
                        default_root_dir=logging_path, 
                        callbacks=[early_stop_callback],
-                       plugins=[SLURMEnvironment(auto_requeue=False)])
+                       plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
 
 
-    print('=========Start to train short sequences============\n------------------------')
-    trainer.fit(model=myesm,train_dataloaders=train_short_dataloader,val_dataloaders=val_short_dataloader)
+    trainer.fit(model=myesm,train_dataloaders=proData.train_dataloader(),val_dataloaders=proData.val_dataloader())
 
-    print('=========Start to train medium sequences============\n------------------------')
-    trainer.fit(model=myesm,train_dataloaders=train_medium_dataloader,val_dataloaders=val_medium_dataloader)
-#TODO: edit the training loop to train them all together in each epoch
-
-    # trainer=pl.Trainer(max_epochs=10, logger=logger, accelerator="gpu",default_root_dir=logging_path, callbacks=[early_stop_callback])
-    print('=========Start to train long sequences============\n------------------------')
-    trainer.fit(model=myesm,train_dataloaders=train_long_dataloader,val_dataloaders=val_long_dataloader)

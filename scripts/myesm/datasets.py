@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 import esm
 from dask.diagnostics import ProgressBar
 
+import lightning.pytorch as pl
 
 def find_current_path():
     if getattr(sys, 'frozen', False):
@@ -35,6 +36,10 @@ from torchvision import transforms, utils
 
 # num_partitions = multiprocessing.cpu_count()-4
 num_partitions = 28
+
+
+
+
 
 class ProteinSequence(Dataset):
     """
@@ -259,6 +264,82 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
         print('sequences count = %s'%extremelongSeq.__len__())
         print('----------------------------------------------')
         return shortSeq,mediumSeq,longSeq,extremelongSeq
+
+
+
+
+
+
+class ProteinDataModule(pl.LightningDataModule):
+    def __init__(self,train_val_ratio, low,medium,high,veryhigh,discard=True,bs_short=4,bs_medium=2,bs_long=1):
+        super().__init__()
+        self.dataset=ProteinSequence()
+        train_set,val_set= split_train_val(self.dataset,0.9)
+        print('Splitting training set by length\n=======================')
+        train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
+        print('Splitting validation set by length\n=======================')
+        val_short_set,val_medium_set,val_long_set=cut_seq(val_set,low,medium,high,veryhigh,True)
+
+        train_short_len,train_medium_len,train_long_len,\
+        val_short_len,val_medium_len,val_long_len=\
+        len(train_short_set),len(train_medium_set),len(train_long_set),\
+        len(val_short_set),len(val_medium_set),len(val_long_set)
+
+        #make sure each machine gets the same num of batches otherwise it will hang
+        self.ts, self.tm, self.tl, self.vs, self.vm, self.vl=\
+                        train_short_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_short),\
+                        train_medium_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_medium),\
+                        train_long_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_long),\
+                        val_short_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_short),\
+                        val_medium_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_medium),\
+                        val_long_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_long)
+
+
+        self.train_short_dataloader = DataLoader(train_short_set, batch_size=bs_short,
+                                            shuffle=True, num_workers=20,drop_last=True)
+        self.val_short_dataloader = DataLoader(val_short_set, batch_size=bs_short,
+                                          shuffle=False, num_workers=20,drop_last=True)
+        self.train_medium_dataloader = DataLoader(train_medium_set, batch_size=bs_medium,
+                                             shuffle=True, num_workers=20,drop_last=True)
+        self.val_medium_dataloader = DataLoader(val_medium_set, batch_size=bs_medium,
+                                           shuffle=False, num_workers=20,drop_last=True)
+        self.train_long_dataloader = DataLoader(train_long_set, batch_size=bs_long,
+                                           shuffle=True, num_workers=20,drop_last=True)
+        self.val_long_dataloader = DataLoader(val_long_set, batch_size=bs_long,
+                                         shuffle=False, num_workers=20,drop_last=True)
+
+
+    def train_dataloader(self):
+        current_epoch=self.trainer.current_epoch
+        if current_epoch//3==0:
+            self.trainer.limit_train_batches=self.ts
+            return self.train_short_dataloader
+        elif current_epoch//3==1:
+            self.trainer.limit_train_batches=self.tm
+            return self.train_medium_dataloader
+        elif current_epoch//3==2:
+            self.trainer.limit_train_batches=self.tl
+            return self.train_long_dataloader
+
+    def val_dataloader(self):
+        current_epoch=self.trainer.current_epoch
+        if current_epoch//3==0:
+            self.trainer.limit_val_batches=self.vs
+            return self.val_short_dataloader
+        elif current_epoch//3==1:
+            self.valer.limit_val_batches=self.vm
+            return self.val_medium_dataloader
+        elif current_epoch//3==2:
+            self.valer.limit_val_batches=self.vl
+            return self.val_long_dataloader
+
+
+
+
+
+
+
+
 
 class EsmMeanEmbeddings(Dataset):
     def __init__(self,if_initial_merge=False,dirpath=data_path):
