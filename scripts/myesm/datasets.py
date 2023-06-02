@@ -79,7 +79,9 @@ class ProteinSequence(Dataset):
         #set this to class property to make sure train and val are split on the same indexes
         self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=2
         print(self.all_sequences['Label'].describe())
-    
+    def get_idx_from_uniprot(self,uniprot):
+        idx = self.all_sequences[self.all_sequences['UniProt']==uniprot].index
+        return idx
     def remove_na(self):
         self.all_sequences.dropna(inplace=True,ignore_index=True)
         print('nan removed')
@@ -159,8 +161,10 @@ class ProteinSequence(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         sequences = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Seq')]
+        uniprot = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('UniProt')]
+        name = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Name')]
         labels=self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Label')]
-        sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int()} #multiple or single?
+        sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int(),'UniProt':uniprot,'Name':name} #multiple or single?
         if self.transform:
             sample=self.transform(sample)
         return sample
@@ -204,13 +208,13 @@ class ProteinSequencePair(ProteinSequence):
             sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int(),'Name':self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Name')],'UniProt':self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('UniProt')]} #multiple or single?
             return sample
 
+
+
         def get_idx_from_uniprot(self,uniprot):
             idx = self.all_sequences[self.all_sequences['UniProt']==uniprot].index
-            return idx 
-        
-        
+            return idx
 
-        
+
 
 def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
     curSeq=copy.deepcopy(seqDataset)

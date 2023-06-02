@@ -9,7 +9,7 @@ import esm
 from argparse import ArgumentParser
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.loggers import TensorBoardLogger
-
+from lightning.pytorch.strategies import DDPStrategy
 def find_current_path():
     if getattr(sys, 'frozen', False):
         # The application is frozen
@@ -61,17 +61,17 @@ if __name__ == '__main__':
                                       shuffle=False, num_workers=20)
 
     myesm=Esm_finetune()
-    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune'),name="esm2_t12_35M_UR50D",version='lr1-06_unfreeze6')
+    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune'),name="esm2_t12_35M_UR50D",version='lr4-05_unfreeze6')
 
 
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=5, verbose=True, mode="min")
-    checkpoint_callback = ModelCheckpoint(
-            monitor='val_loss',
-        dirpath= logging_path,
-        filename='esm2_t30_150M_UR50D_lr1-03_-{epoch:02d}-{val_loss:.2f}'
-    )
+    # checkpoint_callback = ModelCheckpoint(
+    #         monitor='val_loss',
+    #     dirpath= logging_path,
+    #     filename='esm2_t30_150M_UR50D_lr1-03_-{epoch:02d}-{val_loss:.2f}'
+    # )
 
-    # trainer=pl.Trainer(max_epochs=80, logger=logger,devices=2, num_nodes=6, strategy="ddp", accelerator="gpu",default_root_dir=logging_path, callbacks=[early_stop_callback])
+    # trainer=pl.Trainer(max_epochs=80, logger=logger,devices=2, num_nodes=1, strategy=DDPStrategy(find_unused_parameters=True), accelerator="gpu",default_root_dir=logging_path, callbacks=[early_stop_callback])
     trainer=pl.Trainer(max_epochs=80, logger=logger,accelerator="gpu",default_root_dir=logging_path, callbacks=[early_stop_callback])
     print('=========Start to train short sequences============\n------------------------')
     trainer.fit(model=myesm,train_dataloaders=train_short_dataloader,val_dataloaders=val_short_dataloader)

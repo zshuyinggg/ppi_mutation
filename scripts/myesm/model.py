@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from torch import optim, nn, utils, Tensor
 import lightning.pytorch as pl
 import esm
+
 from torchmetrics.classification import BinaryAUROC, MulticlassAUROC
 import re
 def find_current_path():
@@ -26,7 +27,7 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
 from scripts.utils import *
-
+from scripts.myesm.datasets import ProteinSequence
 class hfESM(pl.LightningModule):
     def __init__(self,model="esm2_t6_8M_UR50D",num_labels=3):
         super().__init__()
@@ -353,10 +354,10 @@ class Esm_finetune(pl.LightningModule):
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
         loss=nn.functional.cross_entropy(y,batch_labels)
-        self.log('train_loss',loss)
+        self.log('train_loss',loss,on_epoch=True, sync_dist=True)
         torch.cuda.empty_cache()
         train_auroc=self.auroc(y,batch_labels)
-        self.log('train_auroc',train_auroc)
+        self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -374,9 +375,9 @@ class Esm_finetune(pl.LightningModule):
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
         loss=nn.functional.cross_entropy(y,batch_labels)
-        self.log('val_loss',loss)
+        self.log('val_loss',loss, sync_dist=True)
         val_auroc=self.auroc(y,batch_labels)
-        self.log('val_auroc',val_auroc)
+        self.log('val_auroc',val_auroc, sync_dist=True)
         torch.cuda.empty_cache()
         return loss
 
@@ -400,7 +401,7 @@ class Esm_finetune(pl.LightningModule):
         torch.cuda.empty_cache()
         return loss
 
-    def configure_optimizers(self,lr=1e-6) :
+    def configure_optimizers(self,lr=4*1e-5) :
         optimizer=optim.Adam(self.parameters(),lr=lr)
         return optimizer
 
@@ -422,7 +423,105 @@ class Esm_finetune(pl.LightningModule):
 
 
 class Esm_finetune_delta(pl.LightningModule):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False):
+        """
+
+        :param esm_model:
+        :param esm_model_dim:
+        :param n_class:
+        :param truncation_len:
+        :param unfreeze_n_layers:
+        :param repr_layers:
+        :param batch_sample: if "random", then each batch contains random mutated samples and will minus their corresponding wild embeddings.
+        :param include_wild: if True, include wild embeddings as input for linear projections too.
+        """
         super().__init__(esm_model,esm_model_dim,n_class,truncation_len,unfreeze_n_layers,repr_layers)
+        self.batch_sample=batch_sample
+        self.include_wild=include_wild
+        self.init_dataset()
+        if self.include_wild:self.embs_dim=2*self.esm_model_dim
+        self.proj=nn.Sequential(
+            nn.Linear(self.embs_dim,2),
+            nn.Softmax()
+        )
+
+    def init_dataset(self):
+        self.dataset=ProteinSequence()
+
+
+    def training_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        _,labels,seqs=_,batch['label'].long(),batch['seq']
+        mutated_batch_samples=list(zip(labels,seqs))
+        wild_batch_samples=self.get_wild_batch(batch)
+
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples)
+        wild_embs=self.get_esm_embedings(wild_batch_samples)
+
+        del seqs,mutated_batch_samples,wild_batch_samples,batch
+        #TODO: multichannel mlp
+        delta_embs=mutated_embs-wild_embs
+        if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
+        else:embs=delta_embs
+
+        #TODO attention
+
+        y=self.proj(embs.float().to(self.device))
+        loss=nn.functional.cross_entropy(y,labels)
+        self.log('train_loss',loss)
+        torch.cuda.empty_cache()
+        train_auroc=self.auroc(y,labels)
+        self.log('train_auroc',train_auroc)
+        return loss
+
+
+    def validataion_step(self, batch, batch_idx):
+        self.esm_model.eval()
+        self.proj.eval()
+        torch.cuda.empty_cache()
+        _,labels,seqs=_,batch['label'].long(),batch['seq']
+        mutated_batch_samples=list(zip(labels,seqs))
+        wild_batch_samples=self.get_wild_batch(batch)
+
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples)
+        wild_embs=self.get_esm_embedings(wild_batch_samples)
+
+        del seqs,mutated_batch_samples,wild_batch_samples,batch
+        #TODO: multichannel mlp
+        delta_embs=mutated_embs-wild_embs
+        if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
+        else:embs=delta_embs
+
+        #TODO attention
+
+        y=self.proj(embs.float().to(self.device))
+        loss=nn.functional.cross_entropy(y,labels)
+        self.log('val_loss',loss)
+        torch.cuda.empty_cache()
+        val_auroc=self.auroc(y,labels)
+        self.log('val_auroc',val_auroc)
+        return loss
+
+    def get_esm_embedings(self,batch_sample):
+        batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
+        batch_tokens=batch_tokens.to(self.device)
+        batch_labels=torch.stack(batch_labels)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
+        token_representations = results["representations"][self.repr_layers]
+        sequence_representations = []
+        for i, tokens_len in enumerate(batch_lens):
+            sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
+        del token_representations
+        torch.cuda.empty_cache()
+        sequence_representations=torch.stack(sequence_representations)
+        return sequence_representations
+
+    def get_wild_batch(self,mutated_batch):
+        uniprots=mutated_batch['UniProt']
+        batch_sample=[(uniprot,get_sequence_from_uniprot_id(uniprot)) for uniprot in uniprots]
+        return batch_sample
+
+
 
         

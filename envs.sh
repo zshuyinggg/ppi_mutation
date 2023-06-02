@@ -7,3 +7,4 @@ conda install dask
 pip install lightning matplotlib loguru matplotlib_venn
 
 pip3 install torch torchvision torchaudio #CUDA 11.7
+pip install "pytorch-lightning[extra]"

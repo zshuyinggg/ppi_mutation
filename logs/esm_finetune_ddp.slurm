@@ -1,0 +1,30 @@
+#!/bin/bash 
+
+#SBATCH --export=NONE                #Do not propagate environment
+#SBATCH --get-user-env=L             #Replicate login environment
+#SBATCH --job-name=esm_infer_ddp
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=zshuying@tamu.edu
+#SBATCH --mem=200G
+#SBATCH --time=24:00:00
+#SBATCH --error=esm_finetune_ddp.err --output=esm_finetune_ddp.out
+#SBATCH --nodes=2
+#SBATCH --cpus-per-task=20
+#SBATCH --partition=gpu-a40
+#SBATCH --gres=gpu:2
+#SBATCH --ntasks-per-node=2
+
+module load WebProxy
+# export NCCL_P2P_DISABLE=1
+# export NCCL_IB_DISABLE=1
+# export NCCL_DEBUG=WARN
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/scratch/user/zshuying/.conda/envs/yuning/lib/
+module load Anaconda3 cuDNN/8.4.1.50-CUDA-11.7.0 GCC/10.3.0
+source /sw/eb/sw/Anaconda3/2022.05/etc/profile.d/conda.sh
+conda activate yuning
+python --version
+cd $SCRATCH/ppi_mutation/
+which python
+
+srun --export=ALL /scratch/user/zshuying/.conda/envs/yuning/bin/python scripts/myesm/ESM_finetune_ddp.py
+
