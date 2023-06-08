@@ -14,7 +14,7 @@
 *.pth
 /scripts/__pycache__/*
 
-
+/logs/*
 
 *.pyc
 !**.py

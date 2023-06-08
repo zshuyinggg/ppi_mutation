@@ -318,16 +318,19 @@ class Esm_mlp(pl.LightningModule):
 
 
 class Esm_finetune(pl.LightningModule):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12):
+    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,n_class=3,truncation_len=None,unfreeze_n_layers=10,repr_layers=36):
         super().__init__()
+        self.val_out=[]
         self.save_hyperparameters()
+        self.esm_model_dim=esm_model_dim
         self.esm_model, alphabet=esm_model
         self.batch_converter=alphabet.get_batch_converter()
         self.alphabet=alphabet
         self.proj=nn.Sequential(
             nn.Linear(esm_model_dim,n_class),
-            nn.Softmax()
+            nn.Softmax(dim=1)
         )
+        self.train_out=[]
         self.unfreeze_n_layers=unfreeze_n_layers
         self.repr_layers=repr_layers
         self.freeze_layers()
@@ -348,17 +351,41 @@ class Esm_finetune(pl.LightningModule):
         batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
         batch_tokens=batch_tokens.to(self.device)
         # print(batch_tokens.shape)
-        batch_labels=torch.stack(batch_labels)
+        batch_size=batch_tokens.shape[0]
+
+        batch_labels=torch.stack(batch_labels).reshape(batch_size)
         batch_labels=batch_labels.to(self.device)
+
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
+        print(self.trainer.global_rank,'loss before')
+        
         loss=nn.functional.cross_entropy(y,batch_labels)
-        self.log('train_loss',loss,on_epoch=True,on_step=False,sync_dist=True)
+        print(self.trainer.global_rank,'loss after')
+
+        # self.log('train_loss',loss,on_epoch=True,on_step=False)
         torch.cuda.empty_cache()
+        print(self.trainer.global_rank,'before')
+        self.train_out.append(torch.hstack([y,batch_labels.reshape(batch_size,1)]))
+        print(self.trainer.global_rank,'after')
+        del y,batch_labels,sequence_representations,batch_tokens,batch_sample,labels,seqs
         # train_auroc=self.auroc(y,batch_labels)
         # self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
         return loss
+    
+    def on_train_epoch_end(self) :
+        print('coming to train epoch end')
+        all_preds=torch.vstack(self.train_out)
+        # print(all_preds.shape)
+        print('auroc')
+        train_auroc=self.auroc(all_preds.float()[:,:-1],all_preds.long()[:,-1])
+        print('auroc done')
+        train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('train_loss',train_loss)
+        self.log('train_auroc',train_auroc)
+        self.train_out.clear()
+        return super().on_train_epoch_end()
 
     def validation_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
@@ -369,7 +396,8 @@ class Esm_finetune(pl.LightningModule):
         del batch
         batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
         batch_tokens=batch_tokens.to(self.device)
-        batch_labels=torch.stack(batch_labels)
+        batch_size=batch_tokens.shape[0]
+        batch_labels=torch.stack(batch_labels).reshape(batch_size,1)
         batch_labels=batch_labels.to(self.device)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         sequence_representations=self.train_mul_gpu(batch_tokens)
@@ -379,18 +407,24 @@ class Esm_finetune(pl.LightningModule):
         # val_auroc=self.auroc(y,batch_labels)
         # self.log('val_auroc',val_auroc, sync_dist=True)
         torch.cuda.empty_cache()
-        print(y.shape,batch_labels.shape)
+        # print(y.shape,batch_labels.shape)
         pred=torch.hstack([y,batch_labels])
+        self.val_out.append(pred)
         return pred
 
     def on_validation_epoch_end(self):
-        all_preds=torch.vstack(self.validation_step_outputs)
-        print(all_preds.shape)
-        val_auroc=self.auroc(all_preds[:,0],all_preds[:1])
-        val_loss=nn.functional.cross_entropy((all_preds[:,0],all_preds[:,1]))
+        print('start on_val_epoch_end')
+        all_preds=torch.vstack(self.val_out)
+        print('1')
+        # print(all_preds.shape)
+        val_auroc=self.auroc(all_preds.float()[:,:-1],all_preds.long()[:,-1])
+        print(2)
+        val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
+        print(2)
         self.log('val_loss',val_loss)
+        print(3)
         self.log('val_auroc',val_auroc)
-        self.validation_step_outputs.clear()
+        self.val_out.clear()
 
 
     def test_step(self, batch, batch_idx):
@@ -430,11 +464,12 @@ class Esm_finetune(pl.LightningModule):
         del token_representations
         torch.cuda.empty_cache()
         sequence_representations=torch.stack(sequence_representations)
+        del results,batch_tokens
         return sequence_representations
     
 
 
-class Esm_finetune_delta(pl.LightningModule):
+class Esm_finetune_delta(Esm_finetune):
     def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False):
         """
 
@@ -451,26 +486,36 @@ class Esm_finetune_delta(pl.LightningModule):
         self.batch_sample=batch_sample
         self.include_wild=include_wild
         self.init_dataset()
+        self.auroc=BinaryAUROC()
         if self.include_wild:self.embs_dim=2*self.esm_model_dim
+        else:self.embs_dim=self.esm_model_dim
         self.proj=nn.Sequential(
             nn.Linear(self.embs_dim,2),
             nn.Softmax()
         )
-
+        self.val_out=[]
+        self.train_out=[]
     def init_dataset(self):
         self.dataset=ProteinSequence()
 
 
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
-        _,labels,seqs=_,batch['label'].long(),batch['seq']
+        labels,seqs=batch['label'].long(),batch['seq']
         mutated_batch_samples=list(zip(labels,seqs))
+
+        del seqs
         wild_batch_samples=self.get_wild_batch(batch)
 
-        mutated_embs=self.get_esm_embedings(mutated_batch_samples)
-        wild_embs=self.get_esm_embedings(wild_batch_samples)
+        try:
+            mutated_embs=self.get_esm_embedings(mutated_batch_samples)
+            wild_embs=self.get_esm_embedings(wild_batch_samples)
+        except AttributeError:
+            print(seqs)
+            return 0
+        batch_size=wild_embs.shape[0]
 
-        del seqs,mutated_batch_samples,wild_batch_samples,batch
+        del mutated_batch_samples,wild_batch_samples,batch
         #TODO: multichannel mlp
         delta_embs=mutated_embs-wild_embs
         if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
@@ -479,19 +524,31 @@ class Esm_finetune_delta(pl.LightningModule):
         #TODO attention
 
         y=self.proj(embs.float().to(self.device))
-        loss=nn.functional.cross_entropy(y,labels)
-        self.log('train_loss',loss)
-        torch.cuda.empty_cache()
-        train_auroc=self.auroc(y,labels)
-        self.log('train_auroc',train_auroc,prog_bar=True, on_step=False, on_epoch=True)
-        return loss
+        del delta_embs,mutated_embs,wild_embs,embs
 
+        loss=nn.functional.cross_entropy(y,labels)
+        # self.log('train_loss',loss,on_epoch=True,on_step=False,sync_dist=True) #TODO? average epoch?
+        torch.cuda.empty_cache()
+        self.train_out.append(torch.hstack([y,labels.reshape(batch_size,1)]).cpu())
+        # train_auroc=self.auroc(y,batch_labels)
+        # self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
+        del y,labels
+        return loss
+    
+    def on_train_epoch_end(self) :
+        all_preds=torch.vstack(self.train_out)
+        # print(all_preds.shape)
+        train_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
+        train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('train_loss',train_loss)
+        self.log('train_auroc',train_auroc)
+        self.train_out.clear()
 
     def validataion_step(self, batch, batch_idx):
         self.esm_model.eval()
         self.proj.eval()
         torch.cuda.empty_cache()
-        _,labels,seqs=_,batch['label'].long(),batch['seq']
+        labels,seqs=batch['label'].long(),batch['seq']
         mutated_batch_samples=list(zip(labels,seqs))
         wild_batch_samples=self.get_wild_batch(batch)
 
@@ -505,28 +562,48 @@ class Esm_finetune_delta(pl.LightningModule):
         else:embs=delta_embs
 
         #TODO attention
+        batch_size=wild_embs.shape[0]
 
         y=self.proj(embs.float().to(self.device))
-        loss=nn.functional.cross_entropy(y,labels)
-        self.log('val_loss',loss,prog_bar=True, on_step=False, on_epoch=True)
+        del delta_embs,mutated_embds,wild_embs,embs
+        # loss=nn.functional.cross_entropy(y,labels)
+        # self.log('val_loss',loss,prog_bar=True, on_step=False, on_epoch=True)
+        # torch.cuda.empty_cache()
+        # val_auroc=self.auroc(y,labels)
+        # self.log('val_auroc',val_auroc,prog_bar=True, on_step=False, on_epoch=True)
         torch.cuda.empty_cache()
-        val_auroc=self.auroc(y,labels)
-        self.log('val_auroc',val_auroc,prog_bar=True, on_step=False, on_epoch=True)
-        return loss
+        print(y.shape,labels.shape)
+        pred=torch.hstack([y,labels.reshape(batch_size,1)].cpu())
+        self.val_out.append(pred)
+        return pred
 
+    def on_validation_epoch_end(self):
+        all_preds=torch.vstack(self.val_out)
+        # print(all_preds.shape)
+        val_auroc=self.auroc(all_preds.float()[:,1],all_preds[:,-1])
+        val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('val_loss',val_loss)
+        self.log('val_auroc',val_auroc)
+        self.val_out.clear()
+        
+    
     def get_esm_embedings(self,batch_sample):
-        batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
+        torch.cuda.empty_cache()
+        _, _, batch_tokens=self.batch_converter(batch_sample)
         batch_tokens=batch_tokens.to(self.device)
-        batch_labels=torch.stack(batch_labels)
+        if batch_tokens.shape[1]>512:batch_tokens=batch_tokens[:,:512] #TODO random crop
+        # batch_labels=torch.stack(batch_labels)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
         token_representations = results["representations"][self.repr_layers]
+        del results
         sequence_representations = []
         for i, tokens_len in enumerate(batch_lens):
             sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
         del token_representations
         torch.cuda.empty_cache()
         sequence_representations=torch.stack(sequence_representations)
+        del batch_lens,batch_tokens
         return sequence_representations
 
     def get_wild_batch(self,mutated_batch):

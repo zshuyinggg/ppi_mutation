@@ -51,7 +51,8 @@ class ProteinSequence(Dataset):
                  all_uniprot_id_file=os.path.join(data_path,'single_protein_seq/uniprotids_humap_huri.txt'),
                  test_mode=False,
                  transform=None,
-                 random_seed=52):
+                 random_seed=52,
+                 num_classes=3):
         """
         labels: 2 wild. 0 negative. 1 possitive
         :param clinvar_csv:
@@ -83,6 +84,9 @@ class ProteinSequence(Dataset):
         self.all_sequences=self.all_sequences.sample(frac=1).reset_index(drop=True)
         #set this to class property to make sure train and val are split on the same indexes
         self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=2
+        if num_classes==2:
+            self.all_sequences=self.all_sequences[self.all_sequences['Label']!=2]
+            self.all_sequences=self.all_sequences.sample(frac=1).reset_index(drop=True)
         print(self.all_sequences['Label'].describe())
     def get_idx_from_uniprot(self,uniprot):
         idx = self.all_sequences[self.all_sequences['UniProt']==uniprot].index
@@ -271,9 +275,9 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 
 
 class ProteinDataModule(pl.LightningDataModule):
-    def __init__(self,train_val_ratio, low,medium,high,veryhigh,discard=True,bs_short=4,bs_medium=2,bs_long=1):
+    def __init__(self,train_val_ratio, low,medium,high,veryhigh,discard=True,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,num_classes=2):
         super().__init__()
-        self.dataset=ProteinSequence()
+        self.dataset=ProteinSequence(num_classes=num_classes)
         train_set,val_set= split_train_val(self.dataset,0.9)
         print('Splitting training set by length\n=======================')
         train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
@@ -287,12 +291,12 @@ class ProteinDataModule(pl.LightningDataModule):
 
         #make sure each machine gets the same num of batches otherwise it will hang
         self.ts, self.tm, self.tl, self.vs, self.vm, self.vl=\
-                        train_short_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_short),\
-                        train_medium_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_medium),\
-                        train_long_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_long),\
-                        val_short_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_short),\
-                        val_medium_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_medium),\
-                        val_long_len//(self.trainer.num_devices*self.trainer.num_nodes*bs_long)
+                        train_short_len//(num_devices*num_nodes*bs_short),\
+                        train_medium_len//(num_devices*num_nodes*bs_medium),\
+                        train_long_len//(num_devices*num_nodes*bs_long),\
+                        val_short_len//(num_devices*num_nodes*bs_short),\
+                        val_medium_len//(num_devices*num_nodes*bs_medium),\
+                        val_long_len//(num_devices*num_nodes*bs_long)
 
 
         self.train_short_dataloader = DataLoader(train_short_set, batch_size=bs_short,
@@ -311,26 +315,35 @@ class ProteinDataModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         current_epoch=self.trainer.current_epoch
-        if current_epoch//3==0:
-            self.trainer.limit_train_batches=self.ts
+        print('=======current epoch: %s =============='%current_epoch)
+
+
+
+        if current_epoch%3==0:
+            self.trainer.limit_train_batches=self.ts-10
+            # self.trainer.limit_train_batches=4
             return self.train_short_dataloader
-        elif current_epoch//3==1:
-            self.trainer.limit_train_batches=self.tm
+        elif current_epoch%3==1:
+            # print('here 1 ')
+            self.trainer.limit_train_batches=self.tm-10
+            # self.trainer.limit_train_batches=5
             return self.train_medium_dataloader
-        elif current_epoch//3==2:
-            self.trainer.limit_train_batches=self.tl
+        elif current_epoch%3==2:
+            self.trainer.limit_train_batches=self.tl-10
             return self.train_long_dataloader
 
     def val_dataloader(self):
         current_epoch=self.trainer.current_epoch
-        if current_epoch//3==0:
-            self.trainer.limit_val_batches=self.vs
+        if current_epoch%3==0:
+            # self.trainer.limit_val_batches=self.vs-6
+            self.trainer.limit_val_batches=4
             return self.val_short_dataloader
-        elif current_epoch//3==1:
-            self.valer.limit_val_batches=self.vm
+        elif current_epoch%3==1:
+            # self.valer.limit_val_batches=self.vm-6
+            self.valer.limit_val_batches=5
             return self.val_medium_dataloader
-        elif current_epoch//3==2:
-            self.valer.limit_val_batches=self.vl
+        elif current_epoch%3==2:
+            self.valer.limit_val_batches=self.vl-6
             return self.val_long_dataloader
 
 

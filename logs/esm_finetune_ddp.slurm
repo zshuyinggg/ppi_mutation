@@ -2,16 +2,16 @@
 
 #SBATCH --export=NONE                #Do not propagate environment
 #SBATCH --get-user-env=L             #Replicate login environment
-#SBATCH --job-name=esm_infer_ddp
+#SBATCH --job-name=esm_finetune_ddp
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=zshuying@tamu.edu
 #SBATCH --mem=200G
 #SBATCH --time=24:00:00
 #SBATCH --error=esm_finetune_ddp.err --output=esm_finetune_ddp.out
-#SBATCH --nodes=2
+#SBATCH --nodes=5
 #SBATCH --cpus-per-task=20
-#SBATCH --partition=gpu-a40
-#SBATCH --gres=gpu:2
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:a100:2
 #SBATCH --ntasks-per-node=2
 
 module load WebProxy
@@ -26,5 +26,5 @@ python --version
 cd $SCRATCH/ppi_mutation/
 which python
 
-srun --export=ALL /scratch/user/zshuying/.conda/envs/yuning/bin/python scripts/myesm/ESM_finetune_ddp.py
+srun --export=ALL /scratch/user/zshuying/.conda/envs/yuning/bin/python scripts/myesm/ESM_finetune_ddp.py --esm esm2_t36_3B_UR50D --numdevices 2 --numnodes 5 --unfreeze 10
 
