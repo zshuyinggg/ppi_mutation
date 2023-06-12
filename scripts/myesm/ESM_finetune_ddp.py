@@ -53,7 +53,7 @@ esm_model=args.esm
 
 
 if __name__ == '__main__':
-    proData=ProteinDataModule(train_val_ratio=0.9,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,num_classes=3,bs_short=2,bs_medium=1)
+    proData=ProteinDataModule(train_val_ratio=0.9,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=False,bs_short=2,bs_medium=1)
     myesm=Esm_finetune(esm_model=eval("esm.pretrained.%s()"%esm_model) ,unfreeze_n_layers=unfreeze_layers)
     logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="%s"%esm_model,version='lr4-05_unfreeze%s'%unfreeze_layers)
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=5, verbose=True, mode="min")
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     #     dirpath= logging_path,
     #     filename='esm2_t36_3B_UR50D_-{epoch:02d}-{val_loss:.2f}'
     # )
-
+    print('num devices %s, num node %s'%(num_devices,num_nodes))
     trainer=pl.Trainer(max_epochs=80, 
                        logger=logger,devices=num_devices, 
                        num_nodes=num_nodes, 
@@ -82,8 +82,5 @@ if __name__ == '__main__':
     #                    callbacks=[early_stop_callback],
     #                    plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
     proData.trainer=trainer
-    trainer.fit(myesm,datamodule=proData)
-
-    # trainer.fit(model=myesm,train_dataloaders=proData.train_dataloader(),val_dataloaders=proData.val_dataloader())
-    # trainer.fit(model=myesm,datamodule=proData)
+    trainer.fit(model=myesm,datamodule=proData)
 
