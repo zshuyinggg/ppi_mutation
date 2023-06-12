@@ -54,16 +54,16 @@ esm_model=args.esm
 
 if __name__ == '__main__':
     proData=ProteinDataModule(train_val_ratio=0.9,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=False,bs_short=2,bs_medium=1)
-    myesm=Esm_finetune(esm_model=eval("esm.pretrained.%s()"%esm_model) ,unfreeze_n_layers=unfreeze_layers)
-    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="%s"%esm_model,version='lr4-05_unfreeze%s'%unfreeze_layers)
-    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=5, verbose=True, mode="min")
+    myesm=Esm_finetune(esm_model=eval("esm.pretrained.%s()"%esm_model) ,unfreeze_n_layers=unfreeze_layers,lr=1e-4)
+    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="%s"%esm_model,version='lr1-04_unfreeze%s'%unfreeze_layers)
+    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=20, verbose=True, mode="min")
     # checkpoint_callback = ModelCheckpoint(
     #         monitor='val_loss',
     #     dirpath= logging_path,
     #     filename='esm2_t36_3B_UR50D_-{epoch:02d}-{val_loss:.2f}'
     # )
     print('num devices %s, num node %s'%(num_devices,num_nodes))
-    trainer=pl.Trainer(max_epochs=80, 
+    trainer=pl.Trainer(max_epochs=200, 
                        logger=logger,devices=num_devices, 
                        num_nodes=num_nodes, 
                        # limit_train_batches=691,limit_val_batches=74,

@@ -318,7 +318,7 @@ class Esm_mlp(pl.LightningModule):
 
 
 class Esm_finetune(pl.LightningModule):
-    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,truncation_len=None,unfreeze_n_layers=10,repr_layers=36):
+    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,truncation_len=None,unfreeze_n_layers=10,repr_layers=36,lr=4*1e-3):
         super().__init__()
         self.val_out=[]
         self.save_hyperparameters()
@@ -335,6 +335,7 @@ class Esm_finetune(pl.LightningModule):
         self.repr_layers=repr_layers
         self.freeze_layers()
         self.auroc=BinaryAUROC()
+        self.lr=lr
 
     def freeze_layers(self):
         num=self.repr_layers-self.unfreeze_n_layers
@@ -370,7 +371,7 @@ class Esm_finetune(pl.LightningModule):
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('train_loss',train_loss,sync_dist=True)
         self.log('train_auroc',train_auroc,sync_dist=True)
-        del all_pred, train_auroc,train_loss
+        del all_preds, train_auroc,train_loss
         self.train_out.clear()
 
     def validation_step(self, batch, batch_idx):
@@ -422,8 +423,8 @@ class Esm_finetune(pl.LightningModule):
         torch.cuda.empty_cache()
         return loss
 
-    def configure_optimizers(self,lr=4*1e-5) :
-        optimizer=optim.Adam(self.parameters(),lr=lr)
+    def configure_optimizers(self,lr) :
+        optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
         return optimizer
 
     def train_mul_gpu(self,batch_tokens):
@@ -457,7 +458,7 @@ class Esm_finetune_delta(Esm_finetune):
         :param batch_sample: if "random", then each batch contains random mutated samples and will minus their corresponding wild embeddings.
         :param include_wild: if True, include wild embeddings as input for linear projections too.
         """
-        super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers)
+        super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr)
         self.batch_sample=batch_sample
         self.include_wild=include_wild
         self.init_dataset()
@@ -515,8 +516,8 @@ class Esm_finetune_delta(Esm_finetune):
         # print(all_preds.shape)
         train_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('train_loss',train_loss)
-        self.log('train_auroc',train_auroc)
+        self.log('train_loss',train_loss,sync_dist=True)
+        self.log('train_auroc',train_auroc,sync_dist=True)
         self.train_out.clear()
 
     def validataion_step(self, batch, batch_idx):
@@ -540,7 +541,7 @@ class Esm_finetune_delta(Esm_finetune):
         batch_size=wild_embs.shape[0]
 
         y=self.proj(embs.float().to(self.device))
-        del delta_embs,mutated_embds,wild_embs,embs
+        del delta_embs,mutated_embs,wild_embs,embs
         # loss=nn.functional.cross_entropy(y,labels)
         # self.log('val_loss',loss,prog_bar=True, on_step=False, on_epoch=True)
         # torch.cuda.empty_cache()
