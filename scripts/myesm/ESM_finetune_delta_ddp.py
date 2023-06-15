@@ -57,29 +57,30 @@ esm_model=args.esm
 
 if __name__ == '__main__':
     proData=ProteinDataModule(train_val_ratio=0.9,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short=2,bs_medium=1)
-    myesm=Esm_finetune_delta(unfreeze_n_layers=unfreeze_layers,lr=1e-4)
-    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp'),name="%s"%esm_model,version='lr1-04_unfreeze%s'%unfreeze_layers)
+    myesm=Esm_finetune_delta(unfreeze_n_layers=unfreeze_layers,lr=1e-5)
+    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp'),name="%s"%esm_model,version='lr1-05_unfreeze_singleGPU_onlyshort%s'%unfreeze_layers)
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=20, verbose=True, mode="min")
   
 
-    trainer=pl.Trainer(max_epochs=200, 
-                       logger=logger,devices=num_devices, 
-                       num_nodes=num_nodes, 
-                       # limit_train_batches=691,limit_val_batches=74,
-                       strategy=DDPStrategy(find_unused_parameters=True), 
-                       accelerator="gpu",
-                       default_root_dir=logging_path, 
-                       callbacks=[early_stop_callback],
-                       plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
-
-
-    # trainer=pl.Trainer(max_epochs=80, 
-    #                    logger=logger,
-    #                 #    limit_train_batches=691,limit_val_batches=74,
+    # trainer=pl.Trainer(max_epochs=200, 
+    #                    logger=logger,devices=num_devices, 
+    #                    num_nodes=num_nodes, 
+    #                    # limit_train_batches=691,limit_val_batches=74,
+    #                    strategy=DDPStrategy(find_unused_parameters=True), 
     #                    accelerator="gpu",
     #                    default_root_dir=logging_path, 
     #                    callbacks=[early_stop_callback],
     #                    plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
+
+
+    trainer=pl.Trainer(max_epochs=80, 
+                       logger=logger,
+                    #    limit_train_batches=691,limit_val_batches=74,
+                       accelerator="gpu",
+                       default_root_dir=logging_path, 
+                       callbacks=[early_stop_callback],
+                       plugins=[SLURMEnvironment(auto_requeue=False)])
+                    #    reload_dataloaders_every_n_epochs=1)
     
 
     proData.trainer=trainer

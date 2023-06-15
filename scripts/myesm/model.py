@@ -167,7 +167,7 @@ class CustomWriter(BasePredictionWriter):
 class Esm_mlp(pl.LightningModule):
     def __init__(self, mlp_input_dim, mlp_hidden_dim, esm_model=esm.pretrained.esm2_t6_8M_UR50D(),truncation_len=None,mixed_cpu=True ):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['esm_model','mlp','alphabet'], logger=True)
         print(self.device)
         self.esm_model, alphabet=esm_model
         # self.esm_model.to(self.device)
@@ -323,7 +323,8 @@ class Esm_finetune(pl.LightningModule):
         self.val_out=[]
         self.save_hyperparameters()
         self.esm_model_dim=esm_model_dim
-        self.esm_model, alphabet=esm_model
+        if isinstance(esm_model,str):self.esm_model, alphabet=eval(esm_model)
+        else:self.esm_model, alphabet=esm_model
         self.batch_converter=alphabet.get_batch_converter()
         self.alphabet=alphabet
         self.proj=nn.Sequential(
@@ -345,24 +346,24 @@ class Esm_finetune(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
-        _,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
+        labels,seqs=batch['label'].long(),batch['seq']
         batch_sample=list(zip(labels,seqs))
-        del batch
+        del batch,seqs,labels
         batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
-        batch_tokens=batch_tokens.to(self.device)
         # print(batch_tokens.shape)
         batch_size=batch_tokens.shape[0]
 
         batch_labels=torch.stack(batch_labels).reshape(batch_size)
         batch_labels=batch_labels.to(self.device)
 
+        del batch_sample
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
         
         loss=nn.functional.cross_entropy(y,batch_labels)
         torch.cuda.empty_cache()
         self.train_out.append(torch.hstack([y,batch_labels.reshape(batch_size,1)]).cpu())
-        del y,batch_labels,sequence_representations,batch_tokens,batch_sample,labels,seqs
+        del y,batch_labels,sequence_representations,batch_tokens
         return loss
     
     def on_train_epoch_end(self) :
@@ -378,11 +379,10 @@ class Esm_finetune(pl.LightningModule):
         torch.cuda.empty_cache()
         self.esm_model.eval()
         self.proj.eval()
-        _,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
+        labels,seqs=batch['label'].long(),batch['seq']
         batch_sample=list(zip(labels,seqs))
         del batch
         batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
-        batch_tokens=batch_tokens.to(self.device)
         batch_size=batch_tokens.shape[0]
         batch_labels=torch.stack(batch_labels).reshape(batch_size,1)
         batch_labels=batch_labels.to(self.device)
@@ -423,12 +423,14 @@ class Esm_finetune(pl.LightningModule):
         torch.cuda.empty_cache()
         return loss
 
-    def configure_optimizers(self,lr) :
+    def configure_optimizers(self,lr = None) :
         optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
         return optimizer
 
     def train_mul_gpu(self,batch_tokens):
         torch.cuda.empty_cache()
+        batch_tokens=batch_tokens.to(self.device)
+
         self.esm_model.to(device=self.device)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         # batch_tokens=batch_tokens.to(device=self.device)
@@ -446,7 +448,7 @@ class Esm_finetune(pl.LightningModule):
 
 
 class Esm_finetune_delta(Esm_finetune):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None):
         """
 
         :param esm_model:
@@ -467,7 +469,7 @@ class Esm_finetune_delta(Esm_finetune):
         else:self.embs_dim=self.esm_model_dim
         self.proj=nn.Sequential(
             nn.Linear(self.embs_dim,2),
-            nn.Softmax()
+            nn.Softmax(dim=1)
         )
         self.val_out=[]
         self.train_out=[]
@@ -480,7 +482,7 @@ class Esm_finetune_delta(Esm_finetune):
         labels,seqs=batch['label'].long(),batch['seq']
         mutated_batch_samples=list(zip(labels,seqs))
 
-        del seqs
+        # del seqs
         wild_batch_samples=self.get_wild_batch(batch)
 
         try:
@@ -489,6 +491,7 @@ class Esm_finetune_delta(Esm_finetune):
         except AttributeError:
             print(seqs)
             return 0
+        del seqs
         batch_size=wild_embs.shape[0]
 
         del mutated_batch_samples,wild_batch_samples,batch
@@ -556,7 +559,7 @@ class Esm_finetune_delta(Esm_finetune):
     def on_validation_epoch_end(self):
         all_preds=torch.vstack(self.val_out)
         # print(all_preds.shape)
-        val_auroc=self.auroc(all_preds.float()[:,1],all_preds[:,-1])
+        val_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('val_loss',val_loss,sync_dist=True)
         self.log('val_auroc',val_auroc,sync_dist=True)

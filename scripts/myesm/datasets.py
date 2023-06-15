@@ -283,9 +283,9 @@ class ProteinDataModule(pl.LightningDataModule):
     def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True):
         super().__init__()
         self.dataset=ProteinSequence(delta=delta)
-        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,)
+        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long)
         
-    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,):
+    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long):
         train_set,val_set= split_train_val(self.dataset,train_val_ratio)
         print('Splitting training set by length\n=======================')
         train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
