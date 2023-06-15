@@ -7,7 +7,7 @@
 #SBATCH --mail-user=zshuying@tamu.edu
 #SBATCH --mem=200G
 #SBATCH --time=24:00:00
-#SBATCH --error=esm_finetune_ddp.err --output=esm_finetune_ddp.out
+#SBATCH --error=esm_finetune_ddp_investigate.err --output=esm_finetune_ddp_investigate.out
 #SBATCH --nodes=5
 #SBATCH --cpus-per-task=20
 #SBATCH --partition=gpu

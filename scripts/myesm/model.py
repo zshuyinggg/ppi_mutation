@@ -368,10 +368,18 @@ class Esm_finetune(pl.LightningModule):
     
     def on_train_epoch_end(self) :
         all_preds=torch.vstack(self.train_out)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
         train_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
+        train_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('train_loss',train_loss,sync_dist=True)
-        self.log('train_auroc',train_auroc,sync_dist=True)
+        self.log('train_auroc_synced',train_auroc,sync_dist=True)
+        self.log('train_auroc_gathered',train_auroc_gather)
+        print('individual auroc %s'%train_auroc)
+        train_auroc_average=torch.mean(self.all_gather(train_auroc),dim=0)
+        if self.trainer.global_rank==0:
+            print('gathered auroc is %s'%train_auroc_gather)
+            print('average auroc is %s'%train_auroc_average)
         del all_preds, train_auroc,train_loss
         self.train_out.clear()
 
@@ -395,13 +403,21 @@ class Esm_finetune(pl.LightningModule):
         return pred
 
     def on_validation_epoch_end(self):
-        all_preds=torch.vstack(self.val_out)        
+        all_preds=torch.vstack(self.val_out)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
         val_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
+        val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('val_loss',val_loss,sync_dist=True)
-        self.log('val_auroc',val_auroc,sync_dist=True)
+        self.log('val_auroc_synced',val_auroc,sync_dist=True)
+        self.log('val_auroc_gathered',val_auroc_gather)
+        print('individual auroc %s'%val_auroc)
+        val_auroc_average=torch.mean(self.all_gather(val_auroc),dim=0)
+        if self.trainer.global_rank==0:
+            print('gathered auroc is %s'%val_auroc_gather)
+            print('average auroc is %s'%val_auroc_average)
+        del all_preds, val_auroc,val_loss
         self.val_out.clear()
-        del all_preds,val_auroc,val_loss
 
     def test_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
@@ -516,11 +532,19 @@ class Esm_finetune_delta(Esm_finetune):
     
     def on_train_epoch_end(self) :
         all_preds=torch.vstack(self.train_out)
-        # print(all_preds.shape)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
         train_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
+        train_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('train_loss',train_loss,sync_dist=True)
-        self.log('train_auroc',train_auroc,sync_dist=True)
+        self.log('train_auroc_synced',train_auroc,sync_dist=True)
+        self.log('train_auroc_gathered',train_auroc_gather)
+        print('individual auroc %s'%train_auroc)
+        train_auroc_average=torch.mean(self.all_gather(train_auroc),dim=0)
+        if self.trainer.global_rank==0:
+            print('gathered auroc is %s'%train_auroc_gather)
+            print('average auroc is %s'%train_auroc_average)
+        del all_preds, train_auroc,train_loss
         self.train_out.clear()
 
     def validataion_step(self, batch, batch_idx):
@@ -558,13 +582,20 @@ class Esm_finetune_delta(Esm_finetune):
 
     def on_validation_epoch_end(self):
         all_preds=torch.vstack(self.val_out)
-        # print(all_preds.shape)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
         val_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
+        val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('val_loss',val_loss,sync_dist=True)
-        self.log('val_auroc',val_auroc,sync_dist=True)
+        self.log('val_auroc_synced',val_auroc,sync_dist=True)
+        self.log('val_auroc_gathered',val_auroc_gather)
+        print('individual auroc %s'%val_auroc)
+        val_auroc_average=torch.mean(self.all_gather(val_auroc),dim=0)
+        if self.trainer.global_rank==0:
+            print('gathered auroc is %s'%val_auroc_gather)
+            print('average auroc is %s'%val_auroc_average)
+        del all_preds, val_auroc,val_loss
         self.val_out.clear()
-
     
     def get_esm_embedings(self,batch_sample):
         torch.cuda.empty_cache()
