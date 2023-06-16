@@ -60,9 +60,9 @@ esm_model=args.esm
 if __name__ == '__main__':
 
     seed_everything(42, workers=True)
-    proData=ProteinDataModule(train_val_ratio=0.8,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short=2,bs_medium=1)
-    myesm=Esm_finetune_delta(unfreeze_n_layers=unfreeze_layers,lr=12*1e-5)
-    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp'),name="%s"%esm_model,version='trainval0.8_lr1-05_unfreeze_12devices_bs_short2_reload_every2epoch_%s'%unfreeze_layers)
+    proData=ProteinDataModule(train_val_ratio=0.8,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= 2,bs_medium=1,bs_long=1,which_dl='short')
+    myesm=Esm_finetune_delta(unfreeze_n_layers=unfreeze_layers,lr=12*1e-5,random_crop_len=512,include_wild=True)
+    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp'),name="%s"%esm_model,version='trainval0.8_lr1-05_esm_finetune_delta_short_only_no_wild_unfreeze_%s'%unfreeze_layers)
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=20, verbose=True, mode="min")
   
     if num_devices>1:

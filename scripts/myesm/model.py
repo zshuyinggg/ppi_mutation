@@ -318,7 +318,7 @@ class Esm_mlp(pl.LightningModule):
 
 
 class Esm_finetune(pl.LightningModule):
-    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,truncation_len=None,unfreeze_n_layers=10,repr_layers=36,lr=4*1e-3):
+    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,truncation_len=None,unfreeze_n_layers=10,repr_layers=36,lr=4*1e-3,random_crop_len=None):
         super().__init__()
         self.val_out=[]
         self.save_hyperparameters()
@@ -337,6 +337,39 @@ class Esm_finetune(pl.LightningModule):
         self.freeze_layers()
         self.auroc=BinaryAUROC()
         self.lr=lr
+        self.random_crop_len=random_crop_len
+
+
+    def random_crop(self,batch,batch_idx):
+        names,seqs=batch['Name'],batch['seq']
+        seqs_after=[]
+        starts=[]
+        for i in range(len(batch['Name'])):
+            name=names[i]
+            seq=seqs[i]
+            pos=self.get_pos_of_name(name)-1 #it counts from 1 in biology instead 0 in python
+            np.random.seed(int('%d%d'%(self.trainer.current_epoch,batch_idx)))
+            right=len(seq)-self.random_crop_len
+            left=0
+            min_start=max(left,pos-self.random_crop_len+1)
+            max_start=min(right,pos)
+            if pos>=len(seq):start=len(seq)-self.random_crop_len
+            else: start=np.random.randint(low=min_start,high=max_start+1)
+            seq_after=seq[start:start+self.random_crop_len]
+            seqs_after.append(seq_after)
+            starts.append(start)
+        return seqs_after,starts
+
+
+    def get_pos_of_name(self,name):
+        change=name.split('p.')[1]
+        obj=re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)',change)
+        if obj is None:
+            print('%s did not find match'%name)
+            new_seq='Error!! did not find match'
+            return new_seq
+        ori,pos,aft=obj.group(1),int(obj.group(2)),obj.group(3)
+        return int(pos)
 
     def freeze_layers(self):
         num=self.repr_layers-self.unfreeze_n_layers
@@ -347,6 +380,9 @@ class Esm_finetune(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
         labels,seqs=batch['label'].long(),batch['seq']
+        if self.trainer.which_dl!='short':
+            seqs,starts=self.random_crop(batch,batch_idx)
+        else:starts=None
         batch_sample=list(zip(labels,seqs))
         del batch,seqs,labels
         batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
@@ -373,13 +409,11 @@ class Esm_finetune(pl.LightningModule):
         train_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('train_loss',train_loss,sync_dist=True)
-        self.log('train_auroc_synced',train_auroc,sync_dist=True)
         self.log('train_auroc_gathered',train_auroc_gather)
-        print('individual auroc %s'%train_auroc)
+
         train_auroc_average=torch.mean(self.all_gather(train_auroc),dim=0)
         if self.trainer.global_rank==0:
             print('gathered auroc is %s'%train_auroc_gather)
-            print('average auroc is %s'%train_auroc_average)
         del all_preds, train_auroc,train_loss
         self.train_out.clear()
 
@@ -408,14 +442,10 @@ class Esm_finetune(pl.LightningModule):
         val_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
         val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('val_loss',val_loss,sync_dist=True)
-        self.log('val_auroc_synced',val_auroc,sync_dist=True)
         self.log('val_auroc_gathered',val_auroc_gather)
-        print('individual auroc %s'%val_auroc)
-        val_auroc_average=torch.mean(self.all_gather(val_auroc),dim=0)
         if self.trainer.global_rank==0:
-            print('gathered auroc is %s'%val_auroc_gather)
-            print('average auroc is %s'%val_auroc_average)
+            print('\n\n------gathered auroc is %s----\n\n'%val_auroc_gather)
+
         del all_preds, val_auroc,val_loss
         self.val_out.clear()
 
@@ -464,7 +494,7 @@ class Esm_finetune(pl.LightningModule):
 
 
 class Esm_finetune_delta(Esm_finetune):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None,random_crop_len=None):
         """
 
         :param esm_model:
@@ -476,7 +506,7 @@ class Esm_finetune_delta(Esm_finetune):
         :param batch_sample: if "random", then each batch contains random mutated samples and will minus their corresponding wild embeddings.
         :param include_wild: if True, include wild embeddings as input for linear projections too.
         """
-        super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr)
+        super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr,random_crop_len=random_crop_len)
         self.batch_sample=batch_sample
         self.include_wild=include_wild
         self.init_dataset()
@@ -495,11 +525,16 @@ class Esm_finetune_delta(Esm_finetune):
 
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
-        labels,seqs=batch['label'].long(),batch['seq']
+        labels=batch['label'].long()
+        if self.trainer.which_dl!='short':
+            seqs,starts=self.random_crop(batch,batch_idx)
+        else:
+            starts=None
+            seqs=batch['seq']
         mutated_batch_samples=list(zip(labels,seqs))
 
-        # del seqs
-        wild_batch_samples=self.get_wild_batch(batch)
+        del seqs
+        wild_batch_samples=self.get_wild_batch(batch,starts=starts)
 
         try:
             mutated_embs=self.get_esm_embedings(mutated_batch_samples)
@@ -508,7 +543,6 @@ class Esm_finetune_delta(Esm_finetune):
             print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
             print(batch)
             return 0
-        del seqs
         batch_size=wild_embs.shape[0]
 
         del mutated_batch_samples,wild_batch_samples,batch
@@ -523,11 +557,8 @@ class Esm_finetune_delta(Esm_finetune):
         del delta_embs,mutated_embs,wild_embs,embs
 
         loss=nn.functional.cross_entropy(y,labels)
-        # self.log('train_loss',loss,on_epoch=True,on_step=False,sync_dist=True) #TODO? average epoch?
         torch.cuda.empty_cache()
         self.train_out.append(torch.hstack([y,labels.reshape(batch_size,1)]).cpu())
-        # train_auroc=self.auroc(y,batch_labels)
-        # self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
         del y,labels
         return loss
     
@@ -538,17 +569,13 @@ class Esm_finetune_delta(Esm_finetune):
         train_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('train_loss',train_loss,sync_dist=True)
-        self.log('train_auroc_synced',train_auroc,sync_dist=True)
         self.log('train_auroc_gathered',train_auroc_gather)
-        print('individual auroc %s'%train_auroc)
-        train_auroc_average=torch.mean(self.all_gather(train_auroc),dim=0)
         if self.trainer.global_rank==0:
-            print('gathered auroc is %s'%train_auroc_gather)
-            print('average auroc is %s'%train_auroc_average)
+            print('\n\n------gathered auroc is %s----\n\n'%train_auroc_gather)
         del all_preds, train_auroc,train_loss
         self.train_out.clear()
 
-    def validataion_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx):
         self.esm_model.eval()
         self.proj.eval()
         torch.cuda.empty_cache()
@@ -560,24 +587,18 @@ class Esm_finetune_delta(Esm_finetune):
         wild_embs=self.get_esm_embedings(wild_batch_samples)
 
         del seqs,mutated_batch_samples,wild_batch_samples,batch
-        #TODO: multichannel mlp
         delta_embs=mutated_embs-wild_embs
         if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
         else:embs=delta_embs
 
-        #TODO attention
         batch_size=wild_embs.shape[0]
 
         y=self.proj(embs.float().to(self.device))
         del delta_embs,mutated_embs,wild_embs,embs
-        # loss=nn.functional.cross_entropy(y,labels)
-        # self.log('val_loss',loss,prog_bar=True, on_step=False, on_epoch=True)
-        # torch.cuda.empty_cache()
-        # val_auroc=self.auroc(y,labels)
-        # self.log('val_auroc',val_auroc,prog_bar=True, on_step=False, on_epoch=True)
+    
         torch.cuda.empty_cache()
         print(y.shape,labels.shape)
-        pred=torch.hstack([y,labels.reshape(batch_size,1)].cpu())
+        pred=torch.hstack([y,labels.reshape(batch_size,1)]).cpu()
         self.val_out.append(pred)
         return pred
 
@@ -588,13 +609,10 @@ class Esm_finetune_delta(Esm_finetune):
         val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('val_loss',val_loss,sync_dist=True)
-        self.log('val_auroc_synced',val_auroc,sync_dist=True)
         self.log('val_auroc_gathered',val_auroc_gather)
-        print('individual auroc %s'%val_auroc)
         val_auroc_average=torch.mean(self.all_gather(val_auroc),dim=0)
         if self.trainer.global_rank==0:
             print('gathered auroc is %s'%val_auroc_gather)
-            print('average auroc is %s'%val_auroc_average)
         del all_preds, val_auroc,val_loss
         self.val_out.clear()
     
@@ -602,7 +620,6 @@ class Esm_finetune_delta(Esm_finetune):
         torch.cuda.empty_cache()
         _, _, batch_tokens=self.batch_converter(batch_sample)
         batch_tokens=batch_tokens.to(self.device)
-        if batch_tokens.shape[1]>512:batch_tokens=batch_tokens[:,:512] #TODO random crop
         # batch_labels=torch.stack(batch_labels)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
@@ -617,9 +634,14 @@ class Esm_finetune_delta(Esm_finetune):
         del batch_lens,batch_tokens
         return sequence_representations
 
-    def get_wild_batch(self,mutated_batch):
+    def get_wild_batch(self,mutated_batch,starts=None):
+
         uniprots=mutated_batch['UniProt']
-        batch_sample=[(uniprot,get_sequence_from_uniprot_id(uniprot)) for uniprot in uniprots]
+        seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
+        if starts:
+            seqs_after=[seq[start:start+self.random_crop_len] for seq,start in zip(list(seqs),list(starts))]
+            seqs=seqs_after
+        batch_sample=[(uniprot,seq) for uniprot,seq in zip(uniprots,seqs)]
         return batch_sample
 
 

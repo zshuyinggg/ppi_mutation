@@ -65,24 +65,24 @@ if __name__ == '__main__':
     #     filename='esm2_t36_3B_UR50D_-{epoch:02d}-{val_loss:.2f}'
     # )
     print('num devices %s, num node %s'%(num_devices,num_nodes))
-    trainer=pl.Trainer(max_epochs=200, 
-                       logger=logger,devices=num_devices, 
-                       num_nodes=num_nodes, 
-                       # limit_train_batches=691,limit_val_batches=74,
-                       strategy=DDPStrategy(find_unused_parameters=True), 
-                       accelerator="gpu",   
-                       default_root_dir=logging_path, 
-                       callbacks=[early_stop_callback],
-                       plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
-
-
-    # trainer=pl.Trainer(max_epochs=80, 
-    #                    logger=logger,
+    # trainer=pl.Trainer(max_epochs=200, 
+    #                    logger=logger,devices=num_devices, 
+    #                    num_nodes=num_nodes, 
     #                    # limit_train_batches=691,limit_val_batches=74,
-    #                    accelerator="gpu",
+    #                    strategy=DDPStrategy(find_unused_parameters=True), 
+    #                    accelerator="gpu",   
     #                    default_root_dir=logging_path, 
     #                    callbacks=[early_stop_callback],
     #                    plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
+
+
+    trainer=pl.Trainer(max_epochs=80, 
+                       logger=logger,
+                       # limit_train_batches=691,limit_val_batches=74,
+                       accelerator="gpu",
+                       default_root_dir=logging_path, 
+                       callbacks=[early_stop_callback],
+                       plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
     proData.trainer=trainer
     trainer.fit(model=myesm,datamodule=proData)
 
