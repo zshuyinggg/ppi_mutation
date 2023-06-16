@@ -505,7 +505,8 @@ class Esm_finetune_delta(Esm_finetune):
             mutated_embs=self.get_esm_embedings(mutated_batch_samples)
             wild_embs=self.get_esm_embedings(wild_batch_samples)
         except AttributeError:
-            print(seqs)
+            print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
+            print(batch)
             return 0
         del seqs
         batch_size=wild_embs.shape[0]
