@@ -1,4 +1,4 @@
-
+import configparser
 #%%
 import csv
 import xlrd
@@ -28,7 +28,20 @@ sys.path.append(top_path)
 script_path, data_path, logging_path= os.path.join(top_path,'scripts'), \
     os.path.join(top_path,'data'), \
     os.path.join(top_path,'logs')
+def get_config_dic(config):
+    """
+    load in config dict from `configparser` type `ini` file
+    """
+    cf = configparser.ConfigParser()
+    cf.read(config)
+    return convert_config_type(cf)
 
+def get_setting_name(string):
+    base = os.path.basename(string)
+    setting_name=os.path.splitext(base)[0]
+    return setting_name
+def convert_config_type(config):
+    return {item[0]: eval(item[1]) for item in config.items('DEFAULT')}
 def get_stringdb_id(data):
 #'../data/9606.protein.physical.links.detailed.v11.5.txt'
 

@@ -43,11 +43,16 @@ parser = argparse.ArgumentParser(
                     description='What the program does',
                     epilog='Text at the bottom of help')
 
+<<<<<<< HEAD
+
+parser.add_argument('--unfreeze', type=int,default=10, help='')
+=======
 parser.add_argument('--test', type=int, default=0,help='1 if true; 0 if false')
 parser.add_argument('--numnodes', type=int, default=1,help='')
 parser.add_argument('--numdevices', type=int,default=1, help='')
 parser.add_argument('--unfreeze', type=int,default=6, help='')
 parser.add_argument('--esm', type=str, help='',default="esm2_t36_3B_UR50D")
+>>>>>>> 8743a0045de0be3b829316243a209eba8f98921c
 args = parser.parse_args()
 
 num_devices=args.numdevices
