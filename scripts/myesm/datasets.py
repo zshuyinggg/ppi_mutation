@@ -52,7 +52,7 @@ class ProteinSequence(Dataset):
                  test_mode=False,
                  transform=None,
                  random_seed=52,
-                 num_classes=3):
+                 delta=True):
         """
         labels: 2 wild. 0 negative. 1 possitive
         :param clinvar_csv:
@@ -81,12 +81,17 @@ class ProteinSequence(Dataset):
         else:self.read_sequence_file()
         if test_mode:self.all_sequences=self.all_sequences[:10]
         self.remove_na()
-        self.all_sequences=self.all_sequences.sample(frac=1).reset_index(drop=True)
+        torch.manual_seed(random_seed)
+        np.random.seed(random_seed)
+
+        self.all_sequences=self.all_sequences.sample(frac=1,random_state=random_seed).reset_index(drop=True)
         #set this to class property to make sure train and val are split on the same indexes
-        self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=2
-        if num_classes==2:
-            self.all_sequences=self.all_sequences[self.all_sequences['Label']!=2]
-            self.all_sequences=self.all_sequences.sample(frac=1).reset_index(drop=True)
+        self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=0 #wild type is considered the same as benign
+        if delta:
+            self.all_sequences=self.all_sequences[self.all_sequences['Name']!='0']
+            torch.manual_seed(random_seed)
+            np.random.seed(random_seed)
+            self.all_sequences=self.all_sequences.sample(frac=1,random_state=random_seed).reset_index(drop=True)
         print(self.all_sequences['Label'].describe())
     def get_idx_from_uniprot(self,uniprot):
         idx = self.all_sequences[self.all_sequences['UniProt']==uniprot].index
@@ -275,10 +280,13 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 
 
 class ProteinDataModule(pl.LightningDataModule):
-    def __init__(self,train_val_ratio, low,medium,high,veryhigh,discard=True,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,num_classes=2):
+    def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True):
         super().__init__()
-        self.dataset=ProteinSequence(num_classes=num_classes)
-        train_set,val_set= split_train_val(self.dataset,0.9)
+        self.dataset=ProteinSequence(delta=delta)
+        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,)
+        
+    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,):
+        train_set,val_set= split_train_val(self.dataset,train_val_ratio)
         print('Splitting training set by length\n=======================')
         train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
         print('Splitting validation set by length\n=======================')
@@ -316,34 +324,31 @@ class ProteinDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         current_epoch=self.trainer.current_epoch
         print('=======current epoch: %s =============='%current_epoch)
-
-
-
-        if current_epoch%3==0:
+        if 0<=current_epoch%9<3:
             self.trainer.limit_train_batches=self.ts-10
             # self.trainer.limit_train_batches=4
             return self.train_short_dataloader
-        elif current_epoch%3==1:
+        elif 3<=current_epoch%9<6:
             # print('here 1 ')
             self.trainer.limit_train_batches=self.tm-10
             # self.trainer.limit_train_batches=5
             return self.train_medium_dataloader
-        elif current_epoch%3==2:
+        elif 6<=current_epoch%9<9:
             self.trainer.limit_train_batches=self.tl-10
             return self.train_long_dataloader
 
     def val_dataloader(self):
         current_epoch=self.trainer.current_epoch
-        if current_epoch%3==0:
+        if 0<=current_epoch%9<3:
             # self.trainer.limit_val_batches=self.vs-6
             self.trainer.limit_val_batches=4
             return self.val_short_dataloader
-        elif current_epoch%3==1:
-            # self.valer.limit_val_batches=self.vm-6
-            self.valer.limit_val_batches=5
+        elif 3<=current_epoch%9<6:
+            self.trainer.limit_val_batches=self.vm-6
+            # self.trainer.limit_val_batches=5
             return self.val_medium_dataloader
-        elif current_epoch%3==2:
-            self.valer.limit_val_batches=self.vl-6
+        elif 6<=current_epoch%9<9:
+            self.trainer.limit_val_batches=self.vl-6
             return self.val_long_dataloader
 
 

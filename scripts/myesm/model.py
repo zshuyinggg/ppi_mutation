@@ -22,7 +22,6 @@ def find_current_path():
         current = __file__
 
     return current
-from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.callbacks import BasePredictionWriter
 
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
@@ -35,7 +34,7 @@ from scripts.myesm.datasets import ProteinSequence
 
 
 class Esm_finetune(pl.LightningModule):
-    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,n_class=3,truncation_len=None,unfreeze_n_layers=10,repr_layers=36):
+    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,truncation_len=None,unfreeze_n_layers=10,repr_layers=36,lr=4*1e-3):
         super().__init__()
         self.val_out=[]
         self.save_hyperparameters()
@@ -44,71 +43,57 @@ class Esm_finetune(pl.LightningModule):
         self.batch_converter=alphabet.get_batch_converter()
         self.alphabet=alphabet
         self.proj=nn.Sequential(
-            nn.Linear(esm_model_dim,n_class),
+            nn.Linear(esm_model_dim,2),
             nn.Softmax(dim=1)
         )
         self.train_out=[]
         self.unfreeze_n_layers=unfreeze_n_layers
         self.repr_layers=repr_layers
         self.freeze_layers()
-        self.auroc=MulticlassAUROC(num_classes=3)
+        self.auroc=BinaryAUROC()
+        self.lr=lr
 
     def freeze_layers(self):
         num=self.repr_layers-self.unfreeze_n_layers
         for layer in self.esm_model.named_parameters():
             if 'layers' in layer[0] and int(layer[0].split('.')[1])<num:
                 layer[1].requires_grad=False
-                print('layer %s is frozen'%layer[0])
 
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
-        idxes,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
+        _,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
         batch_sample=list(zip(labels,seqs))
         del batch
         batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
         batch_tokens=batch_tokens.to(self.device)
-        # print(batch_tokens.shape)
         batch_size=batch_tokens.shape[0]
 
         batch_labels=torch.stack(batch_labels).reshape(batch_size)
         batch_labels=batch_labels.to(self.device)
 
-        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
-        print(self.trainer.global_rank,'loss before')
         
         loss=nn.functional.cross_entropy(y,batch_labels)
-        print(self.trainer.global_rank,'loss after')
-
-        # self.log('train_loss',loss,on_epoch=True,on_step=False)
         torch.cuda.empty_cache()
-        print(self.trainer.global_rank,'before')
-        self.train_out.append(torch.hstack([y,batch_labels.reshape(batch_size,1)]))
-        print(self.trainer.global_rank,'after')
+        self.train_out.append(torch.hstack([y,batch_labels.reshape(batch_size,1)]).cpu())
         del y,batch_labels,sequence_representations,batch_tokens,batch_sample,labels,seqs
-        # train_auroc=self.auroc(y,batch_labels)
-        # self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
         return loss
     
     def on_train_epoch_end(self) :
-        print('coming to train epoch end')
         all_preds=torch.vstack(self.train_out)
-        # print(all_preds.shape)
-        print('auroc')
-        train_auroc=self.auroc(all_preds.float()[:,:-1],all_preds.long()[:,-1])
-        print('auroc done')
+        train_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('train_loss',train_loss)
-        self.log('train_auroc',train_auroc)
+        self.log('train_loss',train_loss,sync_dist=True)
+        self.log('train_auroc',train_auroc,sync_dist=True)
+        del all_preds, train_auroc,train_loss
         self.train_out.clear()
-        return super().on_train_epoch_end()
 
     def validation_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
         self.esm_model.eval()
         self.proj.eval()
-        idxes,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
+        _,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
         batch_sample=list(zip(labels,seqs))
         del batch
         batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
@@ -116,56 +101,26 @@ class Esm_finetune(pl.LightningModule):
         batch_size=batch_tokens.shape[0]
         batch_labels=torch.stack(batch_labels).reshape(batch_size,1)
         batch_labels=batch_labels.to(self.device)
-        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         sequence_representations=self.train_mul_gpu(batch_tokens)
         y=self.proj(sequence_representations.float().to(self.device))
-        # loss=nn.functional.cross_entropy(y,batch_labels)
-        # self.log('val_loss',loss, on_epoch=True,sync_dist=True)
-        # val_auroc=self.auroc(y,batch_labels)
-        # self.log('val_auroc',val_auroc, sync_dist=True)
         torch.cuda.empty_cache()
-        # print(y.shape,batch_labels.shape)
         pred=torch.hstack([y,batch_labels])
-        self.val_out.append(pred)
+        self.val_out.append(pred.cpu())
+        del labels,seqs,batch_sample,batch_tokens,batch_labels,sequence_representations,y
         return pred
 
     def on_validation_epoch_end(self):
-        print('start on_val_epoch_end')
-        all_preds=torch.vstack(self.val_out)
-        print('1')
-        # print(all_preds.shape)
-        val_auroc=self.auroc(all_preds.float()[:,:-1],all_preds.long()[:,-1])
-        print(2)
+        all_preds=torch.vstack(self.val_out)        
+        val_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
-        print(2)
-        self.log('val_loss',val_loss)
-        print(3)
-        self.log('val_auroc',val_auroc)
+        self.log('val_loss',val_loss,sync_dist=True)
+        self.log('val_auroc',val_auroc,sync_dist=True)
         self.val_out.clear()
+        del all_preds,val_auroc,val_loss
 
 
-    def test_step(self, batch, batch_idx):
-        torch.cuda.empty_cache()
-        self.esm_model.eval()
-        self.proj.eval()
-        idxes,labels,seqs=batch['idx'],batch['label'].long(),batch['seq']
-        batch_sample=list(zip(labels,seqs))
-        del batch
-        batch_labels, _, batch_tokens=self.batch_converter(batch_sample)
-        batch_tokens=batch_tokens.to(self.device)
-        batch_labels=torch.stack(batch_labels)
-        batch_labels=batch_labels.to(self.device)
-        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
-        sequence_representations=self.train_mul_gpu(batch_tokens)
-        y=self.proj(sequence_representations.float().to(self.device))
-        loss=nn.functional.cross_entropy(y,batch_labels)
-        
-        self.log('train_ce_loss',loss)
-        torch.cuda.empty_cache()
-        return loss
-
-    def configure_optimizers(self,lr=4*1e-5) :
-        optimizer=optim.Adam(self.parameters(),lr=lr)
+    def configure_optimizers(self,lr) :
+        optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
         return optimizer
 
     def train_mul_gpu(self,batch_tokens):
@@ -199,7 +154,7 @@ class Esm_finetune_delta(Esm_finetune):
         :param batch_sample: if "random", then each batch contains random mutated samples and will minus their corresponding wild embeddings.
         :param include_wild: if True, include wild embeddings as input for linear projections too.
         """
-        super().__init__(esm_model,esm_model_dim,n_class,truncation_len,unfreeze_n_layers,repr_layers)
+        super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr)
         self.batch_sample=batch_sample
         self.include_wild=include_wild
         self.init_dataset()
@@ -260,21 +215,17 @@ class Esm_finetune_delta(Esm_finetune):
         del delta_embs,mutated_embs,wild_embs,embs
 
         loss=nn.functional.cross_entropy(y,labels)
-        # self.log('train_loss',loss,on_epoch=True,on_step=False,sync_dist=True) #TODO? average epoch?
         torch.cuda.empty_cache()
         self.train_out.append(torch.hstack([y,labels.reshape(batch_size,1)]).cpu())
-        # train_auroc=self.auroc(y,batch_labels)
-        # self.log('train_auroc',train_auroc,on_epoch=True, sync_dist=True)
         del y,labels
         return loss
     
     def on_train_epoch_end(self) :
         all_preds=torch.vstack(self.train_out)
-        # print(all_preds.shape)
         train_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
         train_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('train_loss',train_loss)
-        self.log('train_auroc',train_auroc)
+        self.log('train_loss',train_loss,sync_dist=True)
+        self.log('train_auroc',train_auroc,sync_dist=True)
         self.train_out.clear()
 
     def validataion_step(self, batch, batch_idx):
@@ -289,21 +240,15 @@ class Esm_finetune_delta(Esm_finetune):
         wild_embs=self.get_esm_embedings(wild_batch_samples,names)
 
         del seqs,mutated_batch_samples,wild_batch_samples,batch
-        #TODO: multichannel mlp
         delta_embs=mutated_embs-wild_embs
         if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
         else:embs=delta_embs
 
-        #TODO attention
         batch_size=wild_embs.shape[0]
 
         y=self.proj(embs.float().to(self.device))
         del delta_embs,mutated_embs,wild_embs,embs
-        # loss=nn.functional.cross_entropy(y,labels)
-        # self.log('val_loss',loss,prog_bar=True, on_step=False, on_epoch=True)
-        # torch.cuda.empty_cache()
-        # val_auroc=self.auroc(y,labels)
-        # self.log('val_auroc',val_auroc,prog_bar=True, on_step=False, on_epoch=True)
+
         torch.cuda.empty_cache()
         print(y.shape,labels.shape)
         pred=torch.hstack([y,labels.reshape(batch_size,1)].cpu())
@@ -312,20 +257,18 @@ class Esm_finetune_delta(Esm_finetune):
 
     def on_validation_epoch_end(self):
         all_preds=torch.vstack(self.val_out)
-        # print(all_preds.shape)
         val_auroc=self.auroc(all_preds.float()[:,1],all_preds[:,-1])
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('val_loss',val_loss)
-        self.log('val_auroc',val_auroc)
+        self.log('val_loss',val_loss,sync_dist=True)
+        self.log('val_auroc',val_auroc,sync_dist=True)
         self.val_out.clear()
-        
+
     
     def get_esm_embedings(self,batch_sample,names):
         torch.cuda.empty_cache()
         _, _, batch_tokens=self.batch_converter(batch_sample)
         batch_tokens=batch_tokens.to(self.device)
         if batch_tokens.shape[1]>512:batch_tokens=batch_tokens[:,:512] #TODO random crop
-        # batch_labels=torch.stack(batch_labels)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
         token_representations = results["representations"][self.repr_layers]
