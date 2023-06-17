@@ -597,7 +597,6 @@ class Esm_finetune_delta(Esm_finetune):
         del delta_embs,mutated_embs,wild_embs,embs
     
         torch.cuda.empty_cache()
-        print(y.shape,labels.shape)
         pred=torch.hstack([y,labels.reshape(batch_size,1)]).cpu()
         self.val_out.append(pred)
         return pred

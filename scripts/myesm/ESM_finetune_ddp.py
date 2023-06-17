@@ -55,9 +55,9 @@ esm_model=args.esm
 
 if __name__ == '__main__':
     seed_everything(42, workers=True)
-    proData=ProteinDataModule(train_val_ratio=0.9,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=False,bs_short=2,bs_medium=1)
+    proData=ProteinDataModule(train_val_ratio=0.8,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=False,bs_short=2,bs_medium=2,bs_long=2)
     myesm=Esm_finetune(esm_model=eval("esm.pretrained.%s()"%esm_model) ,unfreeze_n_layers=unfreeze_layers,lr=10*1e-4)
-    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="%s"%esm_model,version='lr1-04_unfreeze%s_gather_investigate_10devices'%unfreeze_layers)
+    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="%s"%esm_model,version='lr1-04_unfreeze%s_reloadevery2__crop512_10devices'%unfreeze_layers)
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=20, verbose=True, mode="min")
     # checkpoint_callback = ModelCheckpoint(
     #         monitor='val_loss',
@@ -82,7 +82,7 @@ if __name__ == '__main__':
                        accelerator="gpu",
                        default_root_dir=logging_path, 
                        callbacks=[early_stop_callback],
-                       plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
+                       plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=2)
     proData.trainer=trainer
     trainer.fit(model=myesm,datamodule=proData)
 
