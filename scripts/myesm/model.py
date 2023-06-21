@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from torch import optim, nn, utils, Tensor
 import lightning.pytorch as pl
 import esm
+import torch.cuda as cuda
 
 from torchmetrics.classification import BinaryAUROC, MulticlassAUROC
 import re
@@ -340,27 +341,44 @@ class Esm_finetune(pl.LightningModule):
         self.random_crop_len=random_crop_len
 
 
-    def random_crop(self,batch,batch_idx):
+    def random_crop_batch(self,batch,batch_idx):
         names,seqs=batch['Name'],batch['seq']
         seqs_after=[]
         starts=[]
+        positions=[]
         for i in range(len(batch['Name'])):
             name=names[i]
             seq=seqs[i]
             pos=self.get_pos_of_name(name)-1 #it counts from 1 in biology instead 0 in python
-            np.random.seed(int('%d%d'%(self.trainer.current_epoch,batch_idx)))
-            right=len(seq)-self.random_crop_len
-            left=0
-            min_start=max(left,pos-self.random_crop_len+1)
-            max_start=min(right,pos)
-            if pos>=len(seq):start=len(seq)-self.random_crop_len
-            else: start=np.random.randint(low=min_start,high=max_start+1)
-            seq_after=seq[start:start+self.random_crop_len]
+            if len(seq)>self.random_crop_len:
+                np.random.seed(int('%d%d'%(self.trainer.current_epoch,batch_idx)))
+                right=len(seq)-self.random_crop_len
+                left=0
+                min_start=max(left,pos-self.random_crop_len+1)
+                max_start=min(right,pos)
+                if pos>=len(seq):start=len(seq)-self.random_crop_len
+                else: start=np.random.randint(low=min_start,high=max_start+1)
+                seq_after=seq[start:start+self.random_crop_len]
+            else:
+                seq_after=seq
+                start=None
             seqs_after.append(seq_after)
             starts.append(start)
-        return seqs_after,starts
+            positions.append(pos)
+        return seqs_after,starts,positions
 
 
+    def random_crop(self,seq,pos):
+        np.random.seed(int('%d%d'%(self.trainer.current_epoch,self.trainer.global_step)))
+        right=len(seq)-self.random_crop_len
+        left=0
+        min_start=max(left,pos-self.random_crop_len+1)
+        max_start=min(right,pos)
+        if pos>=len(seq):start=len(seq)-self.random_crop_len
+        else: start=np.random.randint(low=min_start,high=max_start+1)
+        seq_after=seq[start:start+self.random_crop_len]
+        return seq_after
+    
     def get_pos_of_name(self,name):
         change=name.split('p.')[1]
         obj=re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)',change)
@@ -381,7 +399,7 @@ class Esm_finetune(pl.LightningModule):
         torch.cuda.empty_cache()
         labels,seqs=batch['label'].long(),batch['seq']
         if self.trainer.which_dl!='short':
-            seqs,starts=self.random_crop(batch,batch_idx)
+            seqs,starts=self.random_crop_batch(batch,batch_idx)
         else:starts=None
         batch_sample=list(zip(labels,seqs))
         del batch,seqs,labels
@@ -494,7 +512,7 @@ class Esm_finetune(pl.LightningModule):
 
 
 class Esm_finetune_delta(Esm_finetune):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=3,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None,random_crop_len=None):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None,random_crop_len=None,debug=False):
         """
 
         :param esm_model:
@@ -519,26 +537,66 @@ class Esm_finetune_delta(Esm_finetune):
         )
         self.val_out=[]
         self.train_out=[]
+        self.debug=debug
     def init_dataset(self):
         self.dataset=ProteinSequence()
 
+    def print_memory(self,step,detail=False):
+        if self.debug: 
+            mem = cuda.memory_allocated() / 1024 ** 3  
+            print('/n/n/n====== %s memory used:%.2f=============/n'%(step,mem))
+            if detail and mem>10:
+                for name, param in self.named_parameters():
+                    if param.requires_grad:
+                        param_memory = param.element_size() * param.numel() / 1024 ** 3  # Memory usage for the parameter
+                        if param_memory>1:
+                            print(f"{name} memory usage: {param_memory:.5f} GB")
 
+                for name, buffer in self.named_buffers():
+                    buffer_memory = buffer.element_size() * buffer.numel() / 1024 ** 3  # Memory usage for the buffer
+                    if buffer_memory>1:
+                        print(f"{name} memory usage: {buffer_memory:.5f} GB")
+
+                for name, tensor in self.__dict__.items():
+                    if torch.is_tensor(tensor) and tensor.is_cuda:
+                        tensor_memory = tensor.element_size() * tensor.numel() / 1024 ** 3  # Memory usage for the tensor
+                        if tensor_memory>1:print(f"{name} memory usage: {tensor_memory:.5f} GB")
+
+                for name, tensor in self.named_buffers():
+                    if tensor.grad is not None:
+                        tensor_grad_memory = tensor.grad.element_size() * tensor.grad.numel() / 1024 ** 3  # Memory usage for the tensor gradient
+                        if tensor_grad_memory>1:print(f"{name}.grad memory usage: {tensor_grad_memory:.5f} GB")
+
+                for name, param in self.named_parameters():
+                    if param.grad is not None:
+                        param_grad_memory = param.grad.element_size() * param.grad.numel() / 1024 ** 3  # Memory usage for the parameter gradient
+                        if param_grad_memory>1:print(f"{name}.grad memory usage: {param_grad_memory:.5f} GB")
+        
+        else:
+            pass
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
         labels=batch['label'].long()
-        if self.trainer.which_dl!='short':
-            seqs,starts=self.random_crop(batch,batch_idx)
+        
+        if self.random_crop_len:
+            seqs,starts,pos=self.random_crop_batch(batch,batch_idx)
         else:
             starts=None
             seqs=batch['seq']
+        len_seqs=[len(seq) for seq in seqs]
+        print('\n\n\n\n\n\n\n===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs))
         mutated_batch_samples=list(zip(labels,seqs))
 
         del seqs
-        wild_batch_samples=self.get_wild_batch(batch,starts=starts)
+        wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
+        self.print_memory('initiated batches',detail=True)
 
         try:
             mutated_embs=self.get_esm_embedings(mutated_batch_samples)
+            self.print_memory('mutated_embs obtained',detail=True)
+
             wild_embs=self.get_esm_embedings(wild_batch_samples)
+            self.print_memory('wild_embs obtained',detail=True)
         except AttributeError:
             print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
             print(batch)
@@ -547,19 +605,29 @@ class Esm_finetune_delta(Esm_finetune):
 
         del mutated_batch_samples,wild_batch_samples,batch
         #TODO: multichannel mlp
+        self.print_memory('before delta',detail=True)
+
         delta_embs=mutated_embs-wild_embs
+        self.print_memory('after delta',detail=True)
+
         if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
+
         else:embs=delta_embs
 
         #TODO attention
 
         y=self.proj(embs.float().to(self.device))
+        self.print_memory('after projection',detail=True)
+
         del delta_embs,mutated_embs,wild_embs,embs
 
         loss=nn.functional.cross_entropy(y,labels)
         torch.cuda.empty_cache()
         self.train_out.append(torch.hstack([y,labels.reshape(batch_size,1)]).cpu())
+
         del y,labels
+        self.print_memory('end of the batch',detail=True)
+
         return loss
     
     def on_train_epoch_end(self) :
@@ -621,26 +689,58 @@ class Esm_finetune_delta(Esm_finetune):
         batch_tokens=batch_tokens.to(self.device)
         # batch_labels=torch.stack(batch_labels)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        self.print_memory('inside get_esm_embeddings (1)',detail=True)
         results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
+        self.print_memory('inside get_esm_embeddings (2)',detail=True)
+
         token_representations = results["representations"][self.repr_layers]
+        self.print_memory('inside get_esm_embeddings (3)',detail=True)
+
         del results
         sequence_representations = []
         for i, tokens_len in enumerate(batch_lens):
             sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
+        self.print_memory('inside get_esm_embeddings (4)',detail=True)
+        
         del token_representations
         torch.cuda.empty_cache()
         sequence_representations=torch.stack(sequence_representations)
+        self.print_memory('inside get_esm_embeddings (5)',detail=True)
+
         del batch_lens,batch_tokens
         return sequence_representations
 
-    def get_wild_batch(self,mutated_batch,starts=None):
+    def get_current_epoch_max_len(self):
+        if self.trainer.which_dl=='short':
+            return self.trainer.datamodule.max_short
+        elif self.trainer.which_dl=='medium':
+            return self.trainer.datamodule.max_medium
+        elif self.trainer.which_dl=='long':
+            return self.trainer.datamodule.max_long
 
+    def get_wild_batch(self,mutated_batch,starts=None,pos=None):
         uniprots=mutated_batch['UniProt']
         seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
-        if starts:
-            seqs_after=[seq[start:start+self.random_crop_len] for seq,start in zip(list(seqs),list(starts))]
-            seqs=seqs_after
-        batch_sample=[(uniprot,seq) for uniprot,seq in zip(uniprots,seqs)]
+        batch_sample=[]
+        for i,seq in enumerate(seqs):
+            if starts is None:
+                if len(seq)>self.random_crop_len: # if mutated seq is not cropped but the wild is too long
+                    seq=self.random_crop(seq,pos[i])
+                    batch_sample.append((uniprots[i],seq))
+                else:
+                    batch_sample.append((uniprots[i],seq))
+            else:
+                if starts[i]: #if mutated sequences are cropped and a start is returned
+                    seq=seq[starts[i]:starts[i]+self.random_crop_len]
+                    batch_sample.append((uniprots[i],seq))
+                elif starts[i] is None and len(seq)>self.random_crop_len: # if mutated seq is not cropped but the wild is too long
+                    seq=self.random_crop(seq,pos[i])
+                    batch_sample.append((uniprots[i],seq))
+                else:
+                    batch_sample.append((uniprots[i],seq))
+
+                
+        print('/n/n length of wild batch is %s'%[len(seq) for seq in seqs])
         return batch_sample
 
 
