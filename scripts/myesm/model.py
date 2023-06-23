@@ -59,6 +59,7 @@ class hfESM(pl.LightningModule):
 
     def configure_optimizers(self,lr=1e-8) :
         optimizer=optim.Adam(self.parameters(),lr=lr)
+        print('initiating optimizer with lr = %s'%lr)
         return optimizer
 
 
@@ -462,7 +463,7 @@ class Esm_finetune(pl.LightningModule):
         val_loss=nn.functional.cross_entropy(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('val_auroc_gathered',val_auroc_gather)
         if self.trainer.global_rank==0:
-            print('\n\n------gathered auroc is %s----\n\n'%val_auroc_gather)
+            print('\n------gathered auroc is %s----\n'%val_auroc_gather)
 
         del all_preds, val_auroc,val_loss
         self.val_out.clear()
@@ -544,38 +545,40 @@ class Esm_finetune_delta(Esm_finetune):
     def print_memory(self,step,detail=False):
         if self.debug: 
             mem = cuda.memory_allocated() / 1024 ** 3  
-            print('/n/n/n====== %s memory used:%.2f=============/n'%(step,mem))
+            print('\n====== %s memory used:%.2f=============\n'%(step,mem),flush=True)
             if detail and mem>10:
                 for name, param in self.named_parameters():
                     if param.requires_grad:
                         param_memory = param.element_size() * param.numel() / 1024 ** 3  # Memory usage for the parameter
                         if param_memory>1:
-                            print(f"{name} memory usage: {param_memory:.5f} GB")
+                            print(f"{name} memory usage: {param_memory:.5f} GB",flush=True)
 
                 for name, buffer in self.named_buffers():
                     buffer_memory = buffer.element_size() * buffer.numel() / 1024 ** 3  # Memory usage for the buffer
                     if buffer_memory>1:
-                        print(f"{name} memory usage: {buffer_memory:.5f} GB")
+                        print(f"{name} memory usage: {buffer_memory:.5f} GB",flush=True)
 
                 for name, tensor in self.__dict__.items():
                     if torch.is_tensor(tensor) and tensor.is_cuda:
                         tensor_memory = tensor.element_size() * tensor.numel() / 1024 ** 3  # Memory usage for the tensor
-                        if tensor_memory>1:print(f"{name} memory usage: {tensor_memory:.5f} GB")
+                        if tensor_memory>1:print(f"{name} memory usage: {tensor_memory:.5f} GB",flush=True)
 
                 for name, tensor in self.named_buffers():
                     if tensor.grad is not None:
                         tensor_grad_memory = tensor.grad.element_size() * tensor.grad.numel() / 1024 ** 3  # Memory usage for the tensor gradient
-                        if tensor_grad_memory>1:print(f"{name}.grad memory usage: {tensor_grad_memory:.5f} GB")
+                        if tensor_grad_memory>1:print(f"{name}.grad memory usage: {tensor_grad_memory:.5f} GB",flush=True)
 
                 for name, param in self.named_parameters():
                     if param.grad is not None:
                         param_grad_memory = param.grad.element_size() * param.grad.numel() / 1024 ** 3  # Memory usage for the parameter gradient
-                        if param_grad_memory>1:print(f"{name}.grad memory usage: {param_grad_memory:.5f} GB")
+                        if param_grad_memory>1:print(f"{name}.grad memory usage: {param_grad_memory:.5f} GB",flush=True)
         
         else:
+            print('debug is not on')
             pass
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
+        self.print_memory('entering training step',detail=True)
         labels=batch['label'].long()
         
         if self.random_crop_len:
@@ -584,11 +587,12 @@ class Esm_finetune_delta(Esm_finetune):
             starts=None
             seqs=batch['seq']
         len_seqs=[len(seq) for seq in seqs]
-        print('\n\n\n\n\n\n\n===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs))
+        print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
         mutated_batch_samples=list(zip(labels,seqs))
 
         del seqs
         wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
+        del batch
         self.print_memory('initiated batches',detail=True)
 
         try:
@@ -599,11 +603,10 @@ class Esm_finetune_delta(Esm_finetune):
             self.print_memory('wild_embs obtained',detail=True)
         except AttributeError:
             print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
-            print(batch)
             return 0
         batch_size=wild_embs.shape[0]
 
-        del mutated_batch_samples,wild_batch_samples,batch
+        del mutated_batch_samples,wild_batch_samples
         #TODO: multichannel mlp
         self.print_memory('before delta',detail=True)
 
@@ -639,7 +642,7 @@ class Esm_finetune_delta(Esm_finetune):
         self.log('train_loss',train_loss,sync_dist=True)
         self.log('train_auroc_gathered',train_auroc_gather)
         if self.trainer.global_rank==0:
-            print('\n\n------gathered auroc is %s----\n\n'%train_auroc_gather)
+            print('\n------gathered auroc is %s----\n'%train_auroc_gather,flush=True)
         del all_preds, train_auroc,train_loss
         self.train_out.clear()
 
@@ -647,24 +650,47 @@ class Esm_finetune_delta(Esm_finetune):
         self.esm_model.eval()
         self.proj.eval()
         torch.cuda.empty_cache()
-        labels,seqs=batch['label'].long(),batch['seq']
+        labels=batch['label'].long()
+        
+        seqs,starts,pos=self.random_crop_batch(batch,batch_idx)
+  
+        len_seqs=[len(seq) for seq in seqs]
+        print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
         mutated_batch_samples=list(zip(labels,seqs))
-        wild_batch_samples=self.get_wild_batch(batch)
 
-        mutated_embs=self.get_esm_embedings(mutated_batch_samples)
-        wild_embs=self.get_esm_embedings(wild_batch_samples)
+        del seqs
+        wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
+        self.print_memory('initiated batches',detail=True)
 
-        del seqs,mutated_batch_samples,wild_batch_samples,batch
-        delta_embs=mutated_embs-wild_embs
-        if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
-        else:embs=delta_embs
+        try:
+            mutated_embs=self.get_esm_embedings(mutated_batch_samples)
+            self.print_memory('mutated_embs obtained',detail=True)
 
+            wild_embs=self.get_esm_embedings(wild_batch_samples)
+            self.print_memory('wild_embs obtained',detail=True)
+        except AttributeError:
+            print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
+            print(batch)
+            return 0
         batch_size=wild_embs.shape[0]
 
+        del mutated_batch_samples,wild_batch_samples,batch
+        #TODO: multichannel mlp
+        self.print_memory('before delta',detail=True)
+
+        delta_embs=mutated_embs-wild_embs
+        self.print_memory('after delta',detail=True)
+
+        if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
+
+        else:embs=delta_embs
+
+
         y=self.proj(embs.float().to(self.device))
+        self.print_memory('after projection',detail=True)
+
         del delta_embs,mutated_embs,wild_embs,embs
-    
-        torch.cuda.empty_cache()
+
         pred=torch.hstack([y,labels.reshape(batch_size,1)]).cpu()
         self.val_out.append(pred)
         return pred
@@ -722,25 +748,26 @@ class Esm_finetune_delta(Esm_finetune):
         uniprots=mutated_batch['UniProt']
         seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
         batch_sample=[]
+        lens=[]
         for i,seq in enumerate(seqs):
-            if starts is None:
-                if len(seq)>self.random_crop_len: # if mutated seq is not cropped but the wild is too long
-                    seq=self.random_crop(seq,pos[i])
-                    batch_sample.append((uniprots[i],seq))
-                else:
-                    batch_sample.append((uniprots[i],seq))
+
+            if starts[i] is not None: #if mutated sequences are cropped and a start is returned
+                seq=seq[starts[i]:starts[i]+self.random_crop_len]
+                batch_sample.append((uniprots[i],seq))
+                lens.append(len(seq))
+
+            elif starts[i] is None and len(seq)>self.random_crop_len: # if mutated seq is not cropped but the wild is too long
+                seq=self.random_crop(seq,pos[i])
+                batch_sample.append((uniprots[i],seq))
+                lens.append(len(seq))
+
             else:
-                if starts[i]: #if mutated sequences are cropped and a start is returned
-                    seq=seq[starts[i]:starts[i]+self.random_crop_len]
-                    batch_sample.append((uniprots[i],seq))
-                elif starts[i] is None and len(seq)>self.random_crop_len: # if mutated seq is not cropped but the wild is too long
-                    seq=self.random_crop(seq,pos[i])
-                    batch_sample.append((uniprots[i],seq))
-                else:
-                    batch_sample.append((uniprots[i],seq))
+                print('this seq is not cropped as the length is %s, starts[i] is %s'%(len(seq),starts[i]))
+                lens.append(len(seq))
+                batch_sample.append((uniprots[i],seq))
 
                 
-        print('/n/n length of wild batch is %s'%[len(seq) for seq in seqs])
+        print('\n length of wild batch is %s'%lens)
         return batch_sample
 
 
