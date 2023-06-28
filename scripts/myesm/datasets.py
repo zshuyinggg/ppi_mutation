@@ -285,6 +285,9 @@ class ProteinDataModule(pl.LightningDataModule):
         self.dataset=ProteinSequence(delta=delta)
         self.random_crop_len=random_crop_len
         self.which_dl=which_dl
+        self.max_short=medium
+        self.max_medium=high
+        self.max_long=veryhigh
         self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long)
         
     def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long):
