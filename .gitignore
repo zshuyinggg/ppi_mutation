@@ -18,7 +18,6 @@
 
 *.pyc
 !**.py
-!**.ipynb
 !**.md
 
 *.txt
