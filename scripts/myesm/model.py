@@ -550,42 +550,36 @@ class Esm_finetune_delta(Esm_finetune):
                 for name, param in self.named_parameters():
                     if param.requires_grad:
                         param_memory = param.element_size() * param.numel() / 1024 ** 3  # Memory usage for the parameter
-                        if param_memory>1:
+                        if param_memory>0.3:
                             print(f"{name} memory usage: {param_memory:.5f} GB",flush=True)
 
                 for name, buffer in self.named_buffers():
                     buffer_memory = buffer.element_size() * buffer.numel() / 1024 ** 3  # Memory usage for the buffer
-                    if buffer_memory>1:
+                    if buffer_memory>0.3:
                         print(f"{name} memory usage: {buffer_memory:.5f} GB",flush=True)
 
                 for name, tensor in self.__dict__.items():
                     if torch.is_tensor(tensor) and tensor.is_cuda:
                         tensor_memory = tensor.element_size() * tensor.numel() / 1024 ** 3  # Memory usage for the tensor
-                        if tensor_memory>1:print(f"{name} memory usage: {tensor_memory:.5f} GB",flush=True)
+                        if tensor_memory>0.3:print(f"{name} memory usage: {tensor_memory:.5f} GB",flush=True)
 
                 for name, tensor in self.named_buffers():
                     if tensor.grad is not None:
                         tensor_grad_memory = tensor.grad.element_size() * tensor.grad.numel() / 1024 ** 3  # Memory usage for the tensor gradient
-                        if tensor_grad_memory>1:print(f"{name}.grad memory usage: {tensor_grad_memory:.5f} GB",flush=True)
+                        if tensor_grad_memory>0.3:print(f"{name}.grad memory usage: {tensor_grad_memory:.5f} GB",flush=True)
 
                 for name, param in self.named_parameters():
                     if param.grad is not None:
                         param_grad_memory = param.grad.element_size() * param.grad.numel() / 1024 ** 3  # Memory usage for the parameter gradient
-                        if param_grad_memory>1:print(f"{name}.grad memory usage: {param_grad_memory:.5f} GB",flush=True)
+                        if param_grad_memory>0.3:print(f"{name}.grad memory usage: {param_grad_memory:.5f} GB",flush=True)
         
         else:
-            print('debug is not on')
             pass
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
         self.print_memory('entering training step',detail=True)
         labels=batch['label'].long()
-        
-        if self.random_crop_len:
-            seqs,starts,pos=self.random_crop_batch(batch,batch_idx)
-        else:
-            starts=None
-            seqs=batch['seq']
+        seqs,starts,pos=self.random_crop_batch(batch,batch_idx)
         len_seqs=[len(seq) for seq in seqs]
         print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
         mutated_batch_samples=list(zip(labels,seqs))
@@ -607,7 +601,6 @@ class Esm_finetune_delta(Esm_finetune):
         batch_size=wild_embs.shape[0]
 
         del mutated_batch_samples,wild_batch_samples
-        #TODO: multichannel mlp
         self.print_memory('before delta',detail=True)
 
         delta_embs=mutated_embs-wild_embs
@@ -616,8 +609,6 @@ class Esm_finetune_delta(Esm_finetune):
         if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
 
         else:embs=delta_embs
-
-        #TODO attention
 
         y=self.proj(embs.float().to(self.device))
         self.print_memory('after projection',detail=True)
@@ -772,4 +763,14 @@ class Esm_finetune_delta(Esm_finetune):
 
 
 
-        
+
+
+# import torch
+# import gc
+# for obj in gc.get_objects():
+#     try:
+#         if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+#             mem=obj.element_size()*obj.nelement()/1024**3
+#             if mem>0.5:
+#                 print(obj, obj.size(),mem)
+#     except: pass
