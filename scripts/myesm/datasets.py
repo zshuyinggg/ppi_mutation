@@ -280,12 +280,14 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 
 
 class ProteinDataModule(pl.LightningDataModule):
-    def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True):
+    def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,random_crop_len=False,which_dl=None):
         super().__init__()
         self.dataset=ProteinSequence(delta=delta)
-        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,)
+        self.random_crop_len=random_crop_len
+        self.which_dl=which_dl
+        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long)
         
-    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,):
+    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long):
         train_set,val_set= split_train_val(self.dataset,train_val_ratio)
         print('Splitting training set by length\n=======================')
         train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
@@ -323,32 +325,69 @@ class ProteinDataModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         current_epoch=self.trainer.current_epoch
+
+        if self.which_dl=='short':
+            self.trainer.limit_train_batches=self.ts-1
+            self.trainer.which_dl='short'
+            print('short dataset')
+            return self.train_short_dataloader
+        elif self.which_dl=='medium':
+            self.trainer.limit_train_batches=self.tm-1
+            self.trainer.which_dl='medium'
+            print('medium dataset')
+
+            return self.train_medium_dataloader
+        if self.which_dl=='long':
+            self.trainer.limit_train_batches=self.tl-1
+            self.trainer.which_dl='long'
+            print('long dataset')
+            return self.train_long_dataloader
+        
         print('=======current epoch: %s =============='%current_epoch)
         if 0<=current_epoch%9<3:
-            self.trainer.limit_train_batches=self.ts-10
-            # self.trainer.limit_train_batches=4
+            self.trainer.limit_train_batches=self.ts-1
+            self.trainer.which_dl='short'
             return self.train_short_dataloader
         elif 3<=current_epoch%9<6:
-            # print('here 1 ')
-            self.trainer.limit_train_batches=self.tm-10
-            # self.trainer.limit_train_batches=5
+            self.trainer.which_dl='medium'
+            self.trainer.limit_train_batches=self.tm-1
             return self.train_medium_dataloader
         elif 6<=current_epoch%9<9:
-            self.trainer.limit_train_batches=self.tl-10
+            self.trainer.which_dl='long'
+            self.trainer.limit_train_batches=self.tl-1
             return self.train_long_dataloader
 
     def val_dataloader(self):
+        if self.which_dl=='short':
+            self.trainer.limit_val_batches=self.ts-1
+            self.trainer.which_dl='short'
+            print('short dataset')
+            return self.val_short_dataloader
+        elif self.which_dl=='medium':
+            self.trainer.limit_val_batches=self.tm-1
+            self.trainer.which_dl='medium'
+            print('medium dataset')
+
+            return self.val_medium_dataloader
+        if self.which_dl=='long':
+            self.trainer.limit_val_batches=self.tl-1
+            self.trainer.which_dl='long'
+            print('long dataset')
+            return self.val_long_dataloader
+        
+
+
         current_epoch=self.trainer.current_epoch
         if 0<=current_epoch%9<3:
-            # self.trainer.limit_val_batches=self.vs-6
-            self.trainer.limit_val_batches=4
+            self.trainer.limit_val_batches=self.vs-1
+            # self.trainer.limit_val_batches=4
             return self.val_short_dataloader
         elif 3<=current_epoch%9<6:
-            self.trainer.limit_val_batches=self.vm-6
+            self.trainer.limit_val_batches=self.vm-1
             # self.trainer.limit_val_batches=5
             return self.val_medium_dataloader
         elif 6<=current_epoch%9<9:
-            self.trainer.limit_val_batches=self.vl-6
+            self.trainer.limit_val_batches=self.vl-1
             return self.val_long_dataloader
 
 

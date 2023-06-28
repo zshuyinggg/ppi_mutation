@@ -11,6 +11,7 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.strategies import DDPStrategy
 from lightning.pytorch.plugins.environments import SLURMEnvironment
+from lightning.pytorch import seed_everything
 
 def find_current_path():
     if getattr(sys, 'frozen', False):
@@ -46,10 +47,17 @@ print(args.ini_file)
 all_args = get_config_dic(args.ini_file)
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     proData=ProteinDataModule(all_args)
     myesm=Esm_finetune(all_args)
     logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="%s"%all_args['esm_model'],version='lr1-04_unfreeze%s'%all_args['unfreeze_n_layers'])
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=int(all_args['patience']), verbose=True, mode="min")
+=======
+    seed_everything(42, workers=True)
+    proData=ProteinDataModule(train_val_ratio=0.8,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=False,bs_short=2,bs_medium=2,bs_long=2)
+    myesm=Esm_finetune(esm_model=eval("esm.pretrained.%s()"%esm_model) ,unfreeze_n_layers=unfreeze_layers,lr=10*1e-4)
+    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_ddp'),name="%s"%esm_model,version='lr1-04_unfreeze%s_reloadevery2__crop512_10devices'%unfreeze_layers)
+    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=20, verbose=True, mode="min")
     # checkpoint_callback = ModelCheckpoint(
     #         monitor='val_loss',
     #     dirpath= logging_path,
@@ -70,11 +78,22 @@ if __name__ == '__main__':
 
     # trainer=pl.Trainer(max_epochs=80, 
     #                    logger=logger,
+
     #                    # limit_train_batches=691,limit_val_batches=74,
-    #                    accelerator="gpu",
+    #                    strategy=DDPStrategy(find_unused_parameters=True), 
+    #                    accelerator="gpu",   
     #                    default_root_dir=logging_path, 
     #                    callbacks=[early_stop_callback],
     #                    plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
+
+
+    trainer=pl.Trainer(max_epochs=80, 
+                       logger=logger,
+                       # limit_train_batches=691,limit_val_batches=74,
+                       accelerator="gpu",
+                       default_root_dir=logging_path, 
+                       callbacks=[early_stop_callback],
+                       plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=2)
     proData.trainer=trainer
     trainer.fit(model=myesm,datamodule=proData)
 
