@@ -386,7 +386,15 @@ def modify(seq,hgvs):
     #NP_000240.1:p.Ile219Val
     change=hgvs.split('p.')[1]
     obj=re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)',change)
-    if obj is None:
+    if '=' in change: #NM_000238.4(KCNH2):c.1539C>T (p.Phe513_Gly514=)	
+        obj=re.match(r'([a-zA-Z]+)([0-9]+)',change.split('_')[0])
+        ori,pos=obj.group(1),int(obj.group(2))
+        try:assert ori==seq[pos-1]
+        except (AssertionError,IndexError):
+            new_seq='Error!! Isoform is probably wrong!!!' 
+            return new_seq
+        return seq[:pos-1]+seq[pos:]
+    elif obj is None:
         print('%s did not find match'%hgvs)
         new_seq='Error!! did not find match'
         return new_seq
@@ -396,38 +404,116 @@ def modify(seq,hgvs):
     aft=seq1(aft)  #TODO: '*' as a result should be removed!!
     try:assert ori==seq[pos-1]
     except (AssertionError,IndexError):
-        print(hgvs)
-        print ('ori=%s'%ori, seq[pos-1:pos+1])
-        # raise AssertionError
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform
+        return new_seq
 
     new_seq=seq[:pos-1] + aft + seq[pos:]
     try:assert new_seq[pos-1]==aft
 
     except (AssertionError,IndexError):
-        print(hgvs)
-        print ('ori=%s'%ori, seq[pos-1:pos+1])
-        # raise AssertionError
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform
+        return new_seq
+    if aft=='*': new_seq=new_seq.split('*')[0] #cut the seq according to terminator
     return new_seq
 
 
-from dask.diagnostics import ProgressBar
-ProgressBar().register()
+# from dask.diagnostics import ProgressBar
+# ProgressBar().register()
 @logger.catch
 def gen_mutant_one_row(uniprot_id, name):
-    print('getting sequence from uniprot_id %s'%uniprot_id)
+    # print('getting sequence from uniprot_id %s'%uniprot_id)
     seq = get_sequence_from_uniprot_id(uniprot_id)
-    print('get result as %s'%seq)
+    # print('get result as %s'%seq)
     if seq:
-        print('modifing sequence')
+        # print('modifing sequence')
         seq = modify(seq, name)
-        print('sequence after modification is %s'%seq)
+        # print('sequence after modification is %s'%seq)
     else:
         print('result empty. seq marked as Error getting sequence from uniprot id')
         seq = 'Error getting sequence from uniprot id'
 
     return seq
+
+def if_positive_or_negative(string_list):
+    label=[]
+    for string in string_list:
+        if string in ['Pathogenic',
+                    'Pathogenic/Likely pathogenic',
+                    'probable-pathogenic',
+                    'Likely pathogenic',
+                    'pathologic',
+                    'pathogenic',
+                    'likely pathogenic',
+                    'Pathogenic/Likely pathogenic/Established risk allele',
+                    'likely pathogenic - adrenal pheochromocytoma',
+                    'Pathogenic/Pathogenic, low penetrance',
+                    'Pathogenic, low penetrance']:
+            label.append(1)
+        elif string in ['Benign',
+                    'Likely benign',
+                    'Likely Benign',
+                    'Benign/Likely benign',
+                    'non-pathogenic',
+                    'benign', 'probable-non-pathogenic', 'Likely Benign', 'probably not pathogenic',
+        ]:
+            label.append(-1)
+
+        else: label.append(0)
+    return label
+class Mutant_df(object):
+    list_dfs=[]
+    def __init__(self,df):
+        self.df=df
+        # self.df_name='%s'%os.getpid()
+        print('Mutant. overall length for this process (%s) is %s'%(os.getpid(),len(df)))
+        self.count=0
+    
+    def gen_mutant_one_row(self,uniprot,name):
+        self.count+=1
+        if self.count%100==0:print('pid:%s: %d done'%(os.getpid(),self.count))
+        return gen_mutant_one_row(uniprot,name)
+
+    def gen_mutant_from_df(self):
+        self.df['Seq']=[self.gen_mutant_one_row(uniprot, name) for uniprot, name in zip(self.df['UniProt'], self.df['Name'])]
+        # self.df.to_csv(self.df_name)
+        Mutant_df.list_dfs.append(self.df)
+        return self.df
+    
+    def merge_dfs(self):
+        dfs=pd.concat(Mutant_df.list_dfs,sort=False)
+        dfs.to_csv('merged_mutant_seqs_2023.csv')
+        return dfs
+    
+
+class Wild_df(object):
+    list_dfs=[]
+    def __init__(self,df):
+        self.df=df
+        print('Wild Seq. overall length for this process (%s) is %s'%(os.getpid(),len(df)))
+        self.count=0
+    
+    def get_sequence_from_uniprot_id_cached(self,id):
+        self.count+=1
+        if self.count%100==0:print('pid:%s: %s done'%(os.getpid(),self.count))
+        url = f'https://www.uniprot.org/uniprot/{id}.fasta'
+        response = requests.get(url)
+        if response.ok:
+            seq = ''.join(response.text.strip().split('\n')[1:])
+        if seq.isupper():
+            return seq
+        return None
+
+    def get_sequence_from_df(self):
+        self.df['Seq']=[self.get_sequence_from_uniprot_id_cached(id) for id in self.df['UniProt']]
+        Wild_df.list_dfs.append(self.df)
+        # self.df.to_csv(self.df_name)
+        return self.df
+    
+    def merge_dfs(self):
+        dfs=pd.concat(Mutant_df.list_dfs,sort=False)
+        dfs.to_csv('merged_wild_seqs_2023.csv')
+        return dfs
+    
 
 def gen_mutant_from_df(df):
     return [gen_mutant_one_row(uniprot, name) for uniprot, name in zip(df['UniProt'], df['Name'])]

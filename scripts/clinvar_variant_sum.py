@@ -9,76 +9,33 @@ import requests
 import json
 import re
 
-parser = argparse.ArgumentParser(description='Option to process clinvar data')
-parser.add_argument('--if_raw_file', type=bool,default=False)
-parser.add_argument('--input_file', type=str,required=True)
-# parser.add_argument('--output_dir', type=str,required=True)
-# parser.add_argument('--output_file_prefix', type=str,required=True)
-parser.add_argument('--cpu_num',type=int,default=None)
-# parser.add_argument('--review_filter',type=int,default=1, help='one star above or two star above for the review status')
-
-args = parser.parse_args()
-if_raw_file=args.if_raw_file
-cpu_num=args.cpu_num
-# review_filter=args.review_filter
 
 
-def if_positive_or_negative(string_list):
-    label=[]
-    for string in string_list:
-        if string in ['Pathogenic',
-                    'Pathogenic/Likely pathogenic',
-                    'probable-pathogenic',
-                    'Likely pathogenic',
-                    'pathologic',
-                    'pathogenic',
-                    'likely pathogenic',
-                    'Pathogenic/Likely pathogenic/Established risk allele',
-                    'likely pathogenic - adrenal pheochromocytoma',
-                    'Pathogenic/Pathogenic, low penetrance',
-                    'Pathogenic, low penetrance']:
-            label.append(1)
-        elif string in ['Benign',
-                    'Likely benign',
-                    'Likely Benign',
-                    'Benign/Likely benign',
-                    'non-pathogenic',
-                    'benign', 'probable-non-pathogenic', 'Likely Benign', 'probably not pathogenic',
-        ]:
-            label.append(-1)
-
-        else: label.append(0)
-    return label
 
 def find_fasta_refseq(refseqID):
-    url='https://rest.uniprot.org/uniprotkb/search?query=%s'%refseqID
+    """
+    return uniprot and seq
+    """
+    url='https://rest.uniprot.org/uniprotkb/search?query=%s'%refseqID #e.g.https://rest.uniprot.org/uniprotkb/search?query=NM_000162.5(GCK)
     cnt=json.loads(requests.get(url).text)
+    #get uniprot ID
     try:
         assert re.search('uniprot',cnt.get("results")[0].get("entryType"),re.IGNORECASE)
-        # results=cnt["results"]
-        # for i in range(len(results)):
-        #     if (note in results[i]['uniProtkbId']) and cnt["results"][i]['primaryAccession']:
-        #         return cnt["results"][i]['primaryAccession']
-        #     elif (note in results[i]['uniProtkbId']) and (cnt["results"][i]['primaryAccession'] is None):
-        #         return 'Primary Accession is None'
-        return cnt["results"][0]['primaryAccession']
+        uniprot= cnt["results"][0]['primaryAccession']
     except:
-        print('Error found in '+url)
-        return 'Error found in '+url
-
-def get_uniprot_from_name(name):
+        print('Error getting UniProt ID in '+url)
+        uniprot= 'Error getting UniProt ID in '+url
+        return uniprot,uniprot
+    
+    #get sequence
     try:
-        # refseq=re.match(r'\S*?(?=[\(:])',name).group(0)
-        # note=name.split(':')[0].split('(')[1].split(')')[0]
-        refseq=name.split(':')[0]
-        uniprot=find_fasta_refseq(refseq)
-
+        assert cnt.get("results")[0].get("sequence").get("value")
+        seq= cnt["results"][0]['sequence']["value"]
     except:
-        refseq='Error Finding Refseq'
+        print('Error getting seq in '+url)
+        seq= 'Error getting seq in '+url
+    return uniprot,seq
 
-        print('Error Finding Refseq')
-        uniprot=find_fasta_refseq(refseq)
-    return uniprot
 
 def exlude_synonymous(name):
     #"NM_017813.5(BPNT2):c.228C>A (p.Arg76=)"
@@ -103,7 +60,7 @@ def func(df):
         if current_ref==tmp_ref:
             df.loc[idx,'UniProt']=tmp_uniprot
         elif (df.loc[idx,'UniProt']=='0' or df.loc[idx,'UniProt']==0 or pd.isna(df.loc[idx,'UniProt'])):
-            df.loc[idx,'UniProt']=get_uniprot_from_name(df.loc[idx,'Name'])
+            df.loc[idx,'UniProt'],df.loc[idx,'Seq']=find_fasta_refseq(df.loc[idx,'Name'])
 
         tmp_uniprot=df.loc[idx,'UniProt']
         tmp_ref=current_ref
