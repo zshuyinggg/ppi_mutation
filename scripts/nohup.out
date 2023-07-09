@@ -1,25 +1,595 @@
-17 processes
-criteria provided, single submitter                     110714
-criteria provided, multiple submitters, no conflicts     23431
-reviewed by expert panel                                  1271
-Name: ReviewStatus, dtype: int64
-Included items with review status as ['criteria provided, multiple submitters, no conflicts', 'reviewed by expert panel', 'practice guideline'], length=24702
-There are 24702 rows
-Traceback (most recent call last):
-  File "/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/mp_cpu.py", line 74, in <module>
-    chunks_wild = [f_sequence_wild.loc[f.index[i:i + chunk_size_wild]] for i in range(0, f_sequence_wild.shape[0], chunk_size_wild)]
-  File "/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/mp_cpu.py", line 74, in <listcomp>
-    chunks_wild = [f_sequence_wild.loc[f.index[i:i + chunk_size_wild]] for i in range(0, f_sequence_wild.shape[0], chunk_size_wild)]
-  File "/home/grads/z/zshuying/Downloads/ENTER/envs/shuying/lib/python3.10/site-packages/pandas/core/indexing.py", line 967, in __getitem__
-    return self._getitem_axis(maybe_callable, axis=axis)
-  File "/home/grads/z/zshuying/Downloads/ENTER/envs/shuying/lib/python3.10/site-packages/pandas/core/indexing.py", line 1194, in _getitem_axis
-    return self._getitem_iterable(key, axis=axis)
-  File "/home/grads/z/zshuying/Downloads/ENTER/envs/shuying/lib/python3.10/site-packages/pandas/core/indexing.py", line 1132, in _getitem_iterable
-    keyarr, indexer = self._get_listlike_indexer(key, axis)
-  File "/home/grads/z/zshuying/Downloads/ENTER/envs/shuying/lib/python3.10/site-packages/pandas/core/indexing.py", line 1330, in _get_listlike_indexer
-    keyarr, indexer = ax._get_indexer_strict(key, axis_name)
-  File "/home/grads/z/zshuying/Downloads/ENTER/envs/shuying/lib/python3.10/site-packages/pandas/core/indexes/base.py", line 5796, in _get_indexer_strict
-    self._raise_if_missing(keyarr, indexer, axis_name)
-  File "/home/grads/z/zshuying/Downloads/ENTER/envs/shuying/lib/python3.10/site-packages/pandas/core/indexes/base.py", line 5859, in _raise_if_missing
-    raise KeyError(f"{not_found} not in index")
-KeyError: '[11312, 11313, 11342, 11343, 11344, 11345, 11346, 11347, 11348, 11349, 11355, 11357, 11358, 11359, 11360, 11361, 11362, 11363, 11364, 11365, 11366, 11369, 11373, 11374, 11375, 11376, 11377, 11384, 11390, 11394, 11396, 11398, 11403, 11404, 11418, 11419, 11424, 11426, 11431, 11447, 11448, 11449, 11450, 11459, 11461, 11462, 11463, 11464, 11477, 11478, 11481, 11485, 11487, 11488, 11491, 11492, 11496, 11497, 11498, 11499, 11500, 11501, 11502, 11503, 11504, 11505, 11510, 11513, 11514, 11515, 11516, 11520, 11521, 11522, 11530, 11531, 11539, 11540, 11541, 11542, 11543, 11544, 11546, 11547, 11548, 11554, 11558, 11559, 11565, 11581, 11582, 11583, 11584, 11585, 11586, 11611, 11615, 11616, 11618, 11619, 11620, 11621, 11622, 11623, 11625, 11626, 11627, 11630, 11637, 11640, 11644, 11645, 11648, 11652, 11653, 11654, 11655, 11656, 11658, 11659, 11660, 11661, 11666, 11667, 11668, 11669, 11670, 11671, 11672, 11673, 11674, 11678, 11681, 11683, 11685, 11687, 11689, 11691, 11698, 11699, 11700, 11701, 11702, 11703, 11706, 11710, 11713, 11714, 11715, 11716, 11717, 11718, 11719, 11723, 11724, 11725, 11726, 11729, 11730, 11737, 11738, 11739, 11740, 11743, 11745, 11747, 11749, 11758, 11759, 11760, 11761, 11768, 11769, 11770, 11779, 11782, 11783, 11786, 11787, 11789, 11791, 11793, 11795, 11797, 11799, 11800, 11803, 11804, 11805, 11806, 11808, 11809, 11810, 11814, 11817, 11818, 11819, 11821, 11825, 11827, 11828, 11830, 11832, 11841, 11845, 11846, 11847, 11849, 11852, 11854, 11855, 11858, 11859, 11865, 11866, 11870, 11871, 11877, 11882, 11886, 11892, 11893, 11894, 11902, 11907, 11908, 11910, 11911, 11912, 11913, 11915, 11917, 11919, 11920, 11921, 11922, 11923, 11924, 11925, 11926, 11927, 11928, 11929, 11935, 11939, 11948, 11949, 11951, 11952, 11953, 11955, 11959, 11961, 11963, 11964, 11965, 11966, 11973, 11974, 11975, 11977, 11979, 11983, 11984, 11985, 11986, 11988, 11989, 11992, 11998, 12000, 12004, 12005, 12010, 12011, 12012, 12013, 12022, 12028, 12038, 12039, 12040, 12048, 12049, 12052, 12053, 12056, 12057, 12058, 12059, 12060, 12061, 12064, 12065, 12068, 12069, 12070, 12073, 12074, 12082, 12083, 12084, 12087, 12088, 12090] not in index'
+/home/grads/z/zshuying/Documents/shuying/ppi_mutation/scripts/utils_clinvar.py:71: DtypeWarning: Columns (18) have mixed types. Specify dtype option on import or set low_memory=False.
+  f=pd.read_csv(variant_summary_file,sep='\t')
+Preprocess variant summary file /home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/variant_summary_2023_02_26.txt
+Included items with review status as ['criteria provided, single submitter', 'criteria provided, multiple submitters, no conflicts', 'reviewed by expert panel', 'practice guideline'], length=3949960
+   #AlleleID                       Type  ...      AlternateAlleleVCF  Label
+0      15041                      Indel  ...  TGCTGTAAACTGTAACTGTAAA      1
+1      15041                      Indel  ...  TGCTGTAAACTGTAACTGTAAA      1
+2      15042                   Deletion  ...                       G      1
+3      15042                   Deletion  ...                       G      1
+4      15043  single nucleotide variant  ...                       A      0
+
+[5 rows x 35 columns]
+Total: 271343 rows
+Preprocess variant summary file done with review status = 1
+subprocess 59510 starts, with items total=15961
+59510 started
+subprocess 59511 starts, with items total=15961
+59511 started
+subprocess 59512 starts, with items total=15961
+59512 started
+subprocess 59513 starts, with items total=15961
+59513 started
+subprocess 59514 starts, with items total=15961
+59514 started
+subprocess 59515 starts, with items total=15961
+59515 started
+subprocess 59516 starts, with items total=15961
+59516 started
+subprocess 59517 starts, with items total=15961
+59517 started
+subprocess 59518 starts, with items total=15961
+59518 started
+subprocess 59519 starts, with items total=15961
+59519 started
+subprocess 59520 starts, with items total=15961
+59520 started
+subprocess 59521 starts, with items total=15961
+59521 started
+subprocess 59523 starts, with items total=15961
+59523 started
+subprocess 59524 starts, with items total=15961
+59524 started
+subprocess 59525 starts, with items total=15961
+59525 started
+subprocess 59526 starts, with items total=15961
+59526 started
+subprocess 59527 starts, with items total=15961
+59527 started
+#59510: 100%|██████████| 15961/15961 [1:28:16<00:00,  3.01it/s]
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001191016.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error Finding Refseq from the Name in variant summary file
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=Error Finding Refseq from the Name in variant summary file
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_199037.3
+Error Finding Refseq from the Name in variant summary file
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=Error Finding Refseq from the Name in variant summary file
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176795.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_016592.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_182480.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+subprocess 59510 starts, with items total=6
+59510 started
+#59510: 100%|██████████| 6/6 [00:03<00:00,  1.64it/s]
+#59511: 100%|██████████| 15961/15961 [2:30:59<00:00,  1.76it/s]
+#59515: 100%|██████████| 15961/15961 [2:48:03<00:00,  1.58it/s]
+#59514: 100%|██████████| 15961/15961 [3:06:29<00:00,  1.43it/s]
+#59516: 100%|██████████| 15961/15961 [3:22:04<00:00,  1.32it/s]
+#59513: 100%|██████████| 15961/15961 [3:22:30<00:00,  1.31it/s]
+#59512: 100%|██████████| 15961/15961 [3:41:29<00:00,  1.20it/s]
+#59527: 100%|██████████| 15961/15961 [4:41:35<00:00,  1.06s/it]
+#59521: 100%|██████████| 15961/15961 [5:13:29<00:00,  1.18s/it]
+#59523: 100%|██████████| 15961/15961 [5:15:56<00:00,  1.19s/it]
+#59525: 100%|██████████| 15961/15961 [5:19:44<00:00,  1.20s/it]
+#59520: 100%|██████████| 15961/15961 [5:20:24<00:00,  1.20s/it]
+#59526: 100%|██████████| 15961/15961 [5:21:38<00:00,  1.21s/it]
+#59518: 100%|██████████| 15961/15961 [5:22:39<00:00,  1.21s/it]
+#59524: 100%|██████████| 15961/15961 [5:23:09<00:00,  1.21s/it]
+#59517: 100%|██████████| 15961/15961 [5:29:47<00:00,  1.24s/it]
+#59519: 100%|██████████| 15961/15961 [5:50:44<00:00,  1.32s/it]
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167623.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001374258.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_144612.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001098512.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167623.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167623.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001040113.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001387283.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001387283.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001177599.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001017989.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_203285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_203285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001017989.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_016592.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001159702.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001358263.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_203285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001286446.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_152705.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001243226.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001287344.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001407336.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001099404.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001098512.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001358263.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001368149.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001191058.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001257190.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001122821.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001326325.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_130784.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001291218.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001371097.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001322841.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001144933.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001329556.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001145160.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015967.8
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167931.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001242525.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_212533.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_199451.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001007273.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167931.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001365677.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001318878.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001376571.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_207381.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_203373.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_003946.7
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001256370.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_203285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127598.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001257190.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015967.8
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001122821.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001017989.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001369387.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001005271.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001017989.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001358263.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_152705.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001261428.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001171971.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001277058.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001301071.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001301071.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001017989.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001142285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001142285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001146227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001282614.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001243288.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_212533.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001322059.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_021912.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001277058.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001001290.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_021912.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001252020.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001197097.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_152705.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001166208.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_016592.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001142285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001252020.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167623.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001024843.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_194323.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164507.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164507.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164507.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001080463.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001144997.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_175929.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001142285.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_145893.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015967.8
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_173351.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001040113.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114980.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001083603.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_021912.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001017989.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001261428.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001287344.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_021912.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_145893.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001008222.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001166686.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033360.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127511.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001142386.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001114086.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164507.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001347702.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_207414.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_207308.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_017940.8
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001277945.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001305108.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001243197.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_138569.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001277945.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_144947.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001105281.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001126050.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001193375.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_017940.8
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_207414.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001111045.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001253748.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_152751.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_178167.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_012314.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001371097.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001172438.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001253748.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_139239.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001018053.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164273.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_017940.8
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_173351.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_207414.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_207414.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001004450.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127255.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_173351.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_207414.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_020922.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127357.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127357.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001386093.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_012314.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127240.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001142475.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153699.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001102445.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_130464.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001130080.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001358263.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001277058.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001277058.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015359.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015359.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_145893.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001329556.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001160036.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015359.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015359.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001376571.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167623.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001369387.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001368067.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_173841.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001160036.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015359.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001363810.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001287344.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001358263.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001363810.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001127510.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001083603.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001387283.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001257281.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001376571.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_133379.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001387283.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001387283.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001387283.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001368067.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001329556.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164507.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001368067.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001347702.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_016592.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001372044.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001369387.1
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001160036.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_213655.5
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164277.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001160036.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001164507.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001160036.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001160036.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001167623.2
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_015359.6
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_176806.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_033056.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001128227.3
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_201378.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_153638.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001136139.4
+Error getting UniProt ID in https://rest.uniprot.org/uniprotkb/search?query=NM_001160036.2
