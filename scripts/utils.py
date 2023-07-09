@@ -417,6 +417,11 @@ def modify(seq,hgvs):
     return new_seq
 
 
+
+
+
+
+
 # from dask.diagnostics import ProgressBar
 # ProgressBar().register()
 @logger.catch
@@ -617,33 +622,6 @@ def gen_mutants(df,out_file,bs=1280,delimiter=';'):
     else:
         seq_file=gen_mutants_oneFile(uniprot_ls,name_ls,out_file)
         return seq_file
-
-def if_positive_or_negative(string_list):
-    label=[]
-    for string in string_list:
-        if string in ['Pathogenic', 
-                    'Pathogenic/Likely pathogenic', 
-                    'probable-pathogenic',
-                    'Likely pathogenic', 
-                    'pathologic', 
-                    'pathogenic',
-                    'likely pathogenic',
-                    'Pathogenic/Likely pathogenic/Established risk allele',
-                    'likely pathogenic - adrenal pheochromocytoma',
-                    'Pathogenic/Pathogenic, low penetrance',
-                    'Pathogenic, low penetrance']:
-            label.append(1)
-        elif string in ['Benign',
-                    'Likely benign',
-                    'Likely Benign',
-                    'Benign/Likely benign',
-                    'non-pathogenic', 
-                    'benign', 'probable-non-pathogenic', 'Likely Benign', 'probably not pathogenic',
-        ]:
-            label.append(-1)
-
-        else: label.append(0)
-    return label
 
 
 
