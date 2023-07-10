@@ -46,13 +46,14 @@ class MultiProcessClinvar():
 
         else:
             self.df=df 
-            print('subprocess %s starts, with items total=%s'%(os.getpid(),len(df)))
+            # print('subprocess %s starts, with items total=%s'%(os.getpid(),len(df)))
+            print('subprocess %s starts, with items total=%s'%(os.getpid(),len(self.df[self.df.Seq.apply(lambda x:'soform' in x)])))#TODO
     def process_variants_df(self,save_name):
         pid=os.getpid()
         tqdm_text = "#" + "{}".format(pid).zfill(3)
         cached_refseq,cached_uniprot,cached_seq=None,None,None
         with tqdm(total=len(self.df), desc=tqdm_text, position=pid+1) as pbar:
-            for i,idx in enumerate(self.df.index):
+            for i,idx in enumerate(self.df[self.df.Seq.apply(lambda x:'soform' in x)].index): #TODO
                 current_refseq=get_refseq_from_name(self.df.loc[idx,'Name'])
                 if current_refseq==cached_refseq:
                     self.df.loc[idx,'UniProt']=cached_uniprot
@@ -65,7 +66,7 @@ class MultiProcessClinvar():
         # all uniprot ids that involve in PPI of humap and huri
         self.df = self.df[[uniprot in self.all_ppi_uniprot_ids for uniprot in self.df['UniProt'].tolist()]]
         #only include variants that are in PPI
-        self.df.to_csv('save_name_%s.csv'%pid)
+        self.df.to_csv('%s_%s.csv'%(save_name,pid))
         return self.df
     def preprocess(self,variant_summary_file,review_status):
         f=pd.read_csv(variant_summary_file,sep='\t')
@@ -147,7 +148,7 @@ def exlude_synonymous(name):
 
 def get_refseq_from_name(name):
     try:
-        refseq=re.match(r'\S*?(?=[\(:])',name).group(0)
+        refseq=name.split(':')[0]
 
     except:
         refseq='Error Finding Refseq from the Name in variant summary file'
@@ -196,7 +197,7 @@ def modify(seq,hgvs):
     ori,pos,aft=obj.group(1),int(obj.group(2)),obj.group(3)
     ori=seq1(ori)
     if ori == '*': seq=seq+'*' # if the changes is made to the terminator, then the seq does not have it, we have to add it first
-    aft=seq1(aft)  #TODO: '*' as a result should be removed!!
+    aft=seq1(aft) 
     try:assert ori==seq[pos-1]
     except (AssertionError,IndexError):
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform

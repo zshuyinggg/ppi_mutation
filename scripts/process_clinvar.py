@@ -8,7 +8,7 @@ test=False
 
 pj=os.path.join
 # initialize the data files
-num_processes=17
+num_processes=20
 
 
 
@@ -16,18 +16,20 @@ num_processes=17
 def mp_func_mutant(df):
     mutant_df=MultiProcessClinvar(df=df)
     print('%s started'%os.getpid())
-    df=mutant_df.process_variants_df(save_name='mutant_seq_2023_2')
+    df=mutant_df.process_variants_df(save_name='mutant_seq_2022_2')
     return df
 
 if __name__ == '__main__':
-    preprocess_variant_sum_file=MultiProcessClinvar(variant_summary_file='/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/variant_summary_2023_02_26.txt',\
-                                                df=None,review_status=1)
-    chunk_size_mutant = int(preprocess_variant_sum_file.df.shape[0]/num_processes)
-    chunks_mutant = [preprocess_variant_sum_file.df.loc[preprocess_variant_sum_file.df.index[i:i + chunk_size_mutant]] for i in range(0, preprocess_variant_sum_file.df.shape[0], chunk_size_mutant)]
+    # preprocess_variant_sum_file=MultiProcessClinvar(variant_summary_file='/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/variant_summary_2023_02_26.txt',\
+    #                                             df=None,review_status=1)
+    preprocess_variant_df=pd.read_csv('/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/clinvar/mutant_seq_2022_2.csv')
+    # chunk_size_mutant = int(preprocess_variant_sum_file.df.shape[0]/num_processes)
+    chunk_size_mutant = int(preprocess_variant_df.shape[0]/num_processes)
+    chunks_mutant = [preprocess_variant_df.loc[preprocess_variant_df.index[i:i + chunk_size_mutant]] for i in range(0, preprocess_variant_df.shape[0], chunk_size_mutant)]
     pool = multiprocessing.Pool(processes=num_processes)
     result =pool.map(mp_func_mutant, chunks_mutant)
     f_final_mutant=pd.concat(result,sort=False)
-    f_final_mutant.to_csv('mutant_seq_2023_2.csv')
+    f_final_mutant.to_csv('mutant_seq_2022_2_try2.csv')
 
 # chunk_size_wild = int(f_sequence_wild.shape[0]/num_processes)
 # chunks_wild = [f_sequence_wild.loc[f_sequence_wild.index[i:i + chunk_size_wild]] for i in range(0, f_sequence_wild.shape[0], chunk_size_wild)]
