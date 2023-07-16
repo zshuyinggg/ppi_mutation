@@ -29,38 +29,6 @@ top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find
 sys.path.append(top_path)
 from scripts.utils import *
 from scripts.myesm.datasets import ProteinSequence
-class hfESM(pl.LightningModule):
-    def __init__(self,model="esm2_t6_8M_UR50D",num_labels=3):
-        super().__init__()
-        self.model=EsmForSequenceClassification.from_pretrained("facebook/"+model, num_labels=num_labels)
-        self.model.max_position_embeddings=2048
-        self.num_labels=num_labels
-        self.esm_model=model
-        self.tokenizer=AutoTokenizer.from_pretrained("facebook/"+model)
-
-    # def forward(self,**inputs):
-    #     return self.model(**inputs)
-    
-    def training_step(self,batch,batch_idx):
-        labels,seqs=batch['label'].long(),batch['seq']
-        seqs=self.tokenizer(seqs,padding=True,  return_tensors="pt").input_ids.to(labels)
-        loss=self.model(seqs,labels=labels).loss
-        self.log('train_loss',loss,on_step=True,on_epoch=True,sync_dist=True)
-        return loss
-
-    def validation_step(self,batch,batch_idx):
-        labels,seqs=batch['label'].long(),batch['seq']
-        seqs=self.tokenizer(seqs,padding=True,  return_tensors="pt").input_ids.to(labels)
-        results=self.model(seqs,labels=labels)
-        loss,logits=results['loss'],results['logits']
-        preds=torch.argmax(logits,axis=1)
-        self.log('val_loss',loss,on_step=True,on_epoch=True,sync_dist=True)
-        return {"loss":loss, "preds":preds, "labels":labels}
-
-    def configure_optimizers(self,lr=1e-8) :
-        optimizer=optim.Adam(self.parameters(),lr=lr)
-        print('initiating optimizer with lr = %s'%lr)
-        return optimizer
 
 
 class myMLP(pl.LightningModule):
@@ -315,13 +283,12 @@ class Esm_mlp(pl.LightningModule):
     def configure_optimizers(self,lr=1e-3) :
         optimizer=optim.Adam(self.parameters(),lr=lr)
         return optimizer
->>>>>>> 8743a0045de0be3b829316243a209eba8f98921c
 
 
 
 
 class Esm_finetune(pl.LightningModule):
-    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,truncation_len=None,unfreeze_n_layers=10,repr_layers=36,lr=4*1e-3,random_crop_len=None):
+    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),esm_model_dim=2560,truncation_len=None,unfreeze_n_layers=10,repr_layers=36,lr=4*1e-3,crop_len=None):
         super().__init__()
         self.val_out=[]
         self.save_hyperparameters()
@@ -340,7 +307,7 @@ class Esm_finetune(pl.LightningModule):
         self.freeze_layers()
         self.auroc=BinaryAUROC()
         self.lr=lr
-        self.random_crop_len=random_crop_len
+        self.crop_len=crop_len
 
 
     def random_crop_batch(self,batch,batch_idx):
@@ -352,15 +319,34 @@ class Esm_finetune(pl.LightningModule):
             name=names[i]
             seq=seqs[i]
             pos=self.get_pos_of_name(name)-1 #it counts from 1 in biology instead 0 in python
-            if len(seq)>self.random_crop_len:
+            if len(seq)>self.crop_len:
                 np.random.seed(int('%d%d'%(self.trainer.current_epoch,batch_idx)))
-                right=len(seq)-self.random_crop_len
+                right=len(seq)-self.crop_len
                 left=0
-                min_start=max(left,pos-self.random_crop_len+1)
+                min_start=max(left,pos-self.crop_len+1)
                 max_start=min(right,pos)
-                if pos>=len(seq):start=len(seq)-self.random_crop_len
+                if pos>=len(seq):start=len(seq)-self.crop_len
                 else: start=np.random.randint(low=min_start,high=max_start+1)
-                seq_after=seq[start:start+self.random_crop_len]
+                seq_after=seq[start:start+self.crop_len]
+            else:
+                seq_after=seq
+                start=None
+            seqs_after.append(seq_after)
+            starts.append(start)
+            positions.append(pos)
+        return seqs_after,starts,positions
+
+    def center_crop_batch(self,batch,batch_idx):
+        names,seqs=batch['Name'],batch['seq']
+        seqs_after=[]
+        starts=[]
+        positions=[]
+        for i in range(len(batch['Name'])):
+            name=names[i]
+            seq=seqs[i]
+            pos=self.get_pos_of_name(name)-1 #it counts from 1 in biology instead 0 in python
+            if len(seq)>self.crop_len:
+                seq_after,start=self.center_crop(seq,pos)
             else:
                 seq_after=seq
                 start=None
@@ -370,16 +356,6 @@ class Esm_finetune(pl.LightningModule):
         return seqs_after,starts,positions
 
 
-    def random_crop(self,seq,pos):
-        np.random.seed(int('%d%d'%(self.trainer.current_epoch,self.trainer.global_step)))
-        right=len(seq)-self.random_crop_len
-        left=0
-        min_start=max(left,pos-self.random_crop_len+1)
-        max_start=min(right,pos)
-        if pos>=len(seq):start=len(seq)-self.random_crop_len
-        else: start=np.random.randint(low=min_start,high=max_start+1)
-        seq_after=seq[start:start+self.random_crop_len]
-        return seq_after
     
     def get_pos_of_name(self,name):
         change=name.split('p.')[1]
@@ -401,7 +377,7 @@ class Esm_finetune(pl.LightningModule):
         torch.cuda.empty_cache()
         labels,seqs=batch['label'].long(),batch['seq']
         if self.trainer.which_dl!='short':
-            seqs,starts=self.random_crop_batch(batch,batch_idx)
+            seqs,starts=self.crop_batch(batch,batch_idx)
         else:starts=None
         batch_sample=list(zip(labels,seqs))
         del batch,seqs,labels
@@ -495,7 +471,7 @@ class Esm_finetune(pl.LightningModule):
 
 
 class Esm_finetune_delta(Esm_finetune):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None,random_crop_len=None,debug=False):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),crop_val=False,esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None,crop_len=None,debug=False,crop_mode='random'):
         """
 
         :param esm_model:
@@ -507,7 +483,7 @@ class Esm_finetune_delta(Esm_finetune):
         :param batch_sample: if "random", then each batch contains random mutated samples and will minus their corresponding wild embeddings.
         :param include_wild: if True, include wild embeddings as input for linear projections too.
         """
-        super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr,random_crop_len=random_crop_len)
+        super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr,crop_len=crop_len)
         self.batch_sample=batch_sample
         self.include_wild=include_wild
         self.init_dataset()
@@ -521,6 +497,13 @@ class Esm_finetune_delta(Esm_finetune):
         self.val_out=[]
         self.train_out=[]
         self.debug=debug
+        if crop_mode=='random':
+            self.crop=self.random_crop
+            self.crop_batch=self.random_crop_batch
+        elif crop_mode=='center':
+            self.crop=self.center_crop
+            self.crop_batch=self.center_crop_batch
+        self.crop_val=crop_val
     def init_dataset(self):
         self.dataset=ProteinSequence()
 
@@ -561,9 +544,10 @@ class Esm_finetune_delta(Esm_finetune):
         torch.cuda.empty_cache()
         self.print_memory('entering training step',detail=True)
         labels=batch['label'].long()
-        seqs,starts,pos=self.random_crop_batch(batch,batch_idx)
+        seqs,starts,pos=self.crop_batch(batch,batch_idx)
+        batch['seq']=seqs
         len_seqs=[len(seq) for seq in seqs]
-        print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
+        # print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
         mutated_batch_samples=list(zip(labels,seqs))
 
         del seqs
@@ -577,9 +561,11 @@ class Esm_finetune_delta(Esm_finetune):
 
             wild_embs=self.get_esm_embedings(wild_batch_samples)
             self.print_memory('wild_embs obtained',detail=True)
-        except AttributeError:
-            print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
+        except :
+            # print('\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
+            print([len(sample[1]) for sample in wild_batch_samples])
             return 0
+            
         batch_size=wild_embs.shape[0]
 
         del mutated_batch_samples,wild_batch_samples
@@ -624,16 +610,21 @@ class Esm_finetune_delta(Esm_finetune):
         self.proj.eval()
         torch.cuda.empty_cache()
         labels=batch['label'].long()
-        
-        seqs,starts,pos=self.random_crop_batch(batch,batch_idx)
-  
-        len_seqs=[len(seq) for seq in seqs]
-        print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
-        mutated_batch_samples=list(zip(labels,seqs))
+        if self.crop_val is False: #no cropping
+            print('validation is not cropped')
+            seqs=batch['seq']
+            mutated_batch_samples=list(zip(labels,seqs))
+            wild_batch_samples=self.get_wild_batch(batch,starts=[0]*len(seqs),pos=None)
+        else:
+            seqs,starts,pos=self.crop_batch(batch,batch_idx)
+            batch['seq']=seqs
+            len_seqs=[len(seq) for seq in seqs]
+            # print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
+            mutated_batch_samples=list(zip(labels,seqs))
+            wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
 
+            self.print_memory('initiated batches',detail=True)
         del seqs
-        wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
-        self.print_memory('initiated batches',detail=True)
 
         try:
             mutated_embs=self.get_esm_embedings(mutated_batch_samples)
@@ -682,7 +673,7 @@ class Esm_finetune_delta(Esm_finetune):
         del all_preds, val_auroc,val_loss
         self.val_out.clear()
     
-    def get_esm_embedings(self,batch_sample,names):
+    def get_esm_embedings(self,batch_sample):
         torch.cuda.empty_cache()
         _, _, batch_tokens=self.batch_converter(batch_sample)
         batch_tokens=batch_tokens.to(self.device)
@@ -719,28 +710,33 @@ class Esm_finetune_delta(Esm_finetune):
 
     def get_wild_batch(self,mutated_batch,starts=None,pos=None):
         uniprots=mutated_batch['UniProt']
+        mutants=mutated_batch['seq']
+        mutant_lens=[len(seq) for seq in mutants]
         seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
         batch_sample=[]
         lens=[]
         for i,seq in enumerate(seqs):
 
-            if starts[i] is not None: #if mutated sequences are cropped and a start is returned
-                seq=seq[starts[i]:starts[i]+self.random_crop_len]
+            if starts[i]==0: #no random cropping
+                # print('this seq is not cropped as the length is %s, starts[i] is %s'%(len(seq),starts[i]))
+                lens.append(mutant_lens[i])
+                batch_sample.append((uniprots[i],seq[:mutant_lens[i]])) #the wild seq has to be of same length as the mutant
+
+            elif starts[i] is not None: #if mutated sequences are cropped and a start is returned
+                seq=seq[starts[i]:starts[i]+self.crop_len]
                 batch_sample.append((uniprots[i],seq))
                 lens.append(len(seq))
 
-            elif starts[i] is None and len(seq)>self.random_crop_len: # if mutated seq is not cropped but the wild is too long
-                seq=self.random_crop(seq,pos[i])
+            elif starts[i] is None and len(seq)>self.crop_len: # if mutated seq is not cropped but the wild is too long
+                seq,_=self.crop(seq,pos[i])
                 batch_sample.append((uniprots[i],seq))
                 lens.append(len(seq))
-
             else:
-                print('this seq is not cropped as the length is %s, starts[i] is %s'%(len(seq),starts[i]))
-                lens.append(len(seq))
                 batch_sample.append((uniprots[i],seq))
-
+                lens.append(len(seq))
+            
                 
-        print('\n length of wild batch is %s'%lens)
+        # print('\n length of wild batch is %s'%lens)
         return batch_sample
 
 
@@ -756,3 +752,30 @@ class Esm_finetune_delta(Esm_finetune):
 #             if mem>0.5:
 #                 print(obj, obj.size(),mem)
 #     except: pass
+    def random_crop(self,seq,pos):
+        np.random.seed(int('%d%d'%(self.trainer.current_epoch,self.trainer.global_step)))
+        right=len(seq)-self.crop_len
+        left=0
+        min_start=max(left,pos-self.crop_len+1)
+        max_start=min(right,pos)
+        if pos>=len(seq):start=len(seq)-self.crop_len
+        else: start=np.random.randint(low=min_start,high=max_start+1)
+        seq_after=seq[start:start+self.crop_len]
+        return seq_after
+
+
+    def center_crop(self,seq,pos):
+        left_half=self.crop_len//2
+        right_half=self.crop_len-left_half
+        np.random.seed(int('%d%d'%(self.trainer.current_epoch,self.trainer.global_step)))
+        ideal_right=pos+right_half
+        ideal_left=pos-left_half
+
+        actual_right=len(seq)
+        actual_left=0
+        if actual_left>ideal_left:left,right=actual_left,actual_left+self.crop_len
+        else:
+            if actual_right<ideal_right:left,right=actual_right-self.crop_len,actual_right
+            else:left,right=ideal_left,ideal_right
+        seq_after=seq[left:right]
+        return seq_after,left
