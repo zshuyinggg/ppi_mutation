@@ -281,66 +281,77 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 
 
 class ProteinDataModule(pl.LightningDataModule):
-    def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,crop_val=False,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,crop_len=False,which_dl=None,clinvar_csv=os.path.join(script_path,'merged_2019_1.csv'),mix_val=False):
+    def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,crop_val=False,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,crop_len=False,which_dl=None,clinvar_csv=os.path.join(script_path,'merged_2019_1.csv'),mix_val=False,train_mix=False):
         super().__init__()
         self.dataset=ProteinSequence(clinvar_csv=clinvar_csv,delta=delta)
         self.crop_len=crop_len
+        self.train_mix=train_mix
         self.which_dl=which_dl
         self.max_short=medium
         self.max_medium=high
         self.max_long=veryhigh
         self.mix_val=mix_val
         self.crop_val=crop_val
-        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long)
+        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,train_mix)
         
-    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long):
-        train_set,val_set= split_train_val(self.dataset,train_val_ratio)
-        print('Splitting training set by length\n=======================')
-        train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
-        train_short_len,train_medium_len,train_long_len=len(train_short_set),len(train_medium_set),len(train_long_set),
-        
-        
-        
-        
-        print('Splitting validation set by length\n=======================')
-        val_short_set,val_medium_set,val_long_set=cut_seq(val_set,low,medium,high,veryhigh,True)
-        val_mix_set,_,_=cut_seq(val_set,low,veryhigh,veryhigh+1,veryhigh+2,True)
-        val_short_len,val_medium_len,val_long_len=\
-        len(val_short_set),len(val_medium_set),len(val_long_set)
-
-        
-        if self.crop_val:val_mix_ds=2 
-        else: val_mix_ds=1
-        #make sure each machine gets the same num of batches otherwise it will hang
-        self.ts, self.tm, self.tl, self.vs, self.vm, self.vl=\
-                        train_short_len//(num_devices*num_nodes*bs_short),\
-                        train_medium_len//(num_devices*num_nodes*bs_medium),\
-                        train_long_len//(num_devices*num_nodes*bs_long),\
-                        val_short_len//(num_devices*num_nodes*bs_short),\
-                        val_medium_len//(num_devices*num_nodes*bs_medium),\
-                        val_long_len//(num_devices*num_nodes*bs_long)
-
-        if train_short_len:
-            self.train_short_dataloader = DataLoader(train_short_set, batch_size=bs_short,
-                                                shuffle=True, num_workers=20,drop_last=True)
-            
-            self.train_medium_dataloader = DataLoader(train_medium_set, batch_size=bs_medium,
-                                                shuffle=True, num_workers=20,drop_last=True)
-            self.train_long_dataloader = DataLoader(train_long_set, batch_size=bs_long,
+    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,train_mix):
+        if train_mix:
+            print('Splitting train val with ratio = %s, did not seperate training set with lengths'%train_val_ratio)
+            train_set,val_set= split_train_val(self.dataset,train_val_ratio)
+            self.train_mix_dataloader = DataLoader(train_set, batch_size=bs_long,
                                             shuffle=True, num_workers=20,drop_last=True)
-        self.val_short_dataloader = DataLoader(val_short_set, batch_size=1,
+            self.val_mix_dataloader = DataLoader(val_set, batch_size=bs_long,
                                           shuffle=False, num_workers=20,drop_last=True)
-        self.val_medium_dataloader = DataLoader(val_medium_set, batch_size=1,
-                                           shuffle=False, num_workers=20,drop_last=True)
         
-        self.val_long_dataloader = DataLoader(val_long_set, batch_size=1,
-                                         shuffle=False, num_workers=20,drop_last=True)
-        self.val_mix_dataloader=DataLoader(val_mix_set, batch_size=val_mix_ds,
-                                         shuffle=False, num_workers=20,drop_last=True)
+        else:
+            train_set,val_set= split_train_val(self.dataset,train_val_ratio)
+            print('Splitting training set by length\n=======================')
+            train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
+            train_short_len,train_medium_len,train_long_len=len(train_short_set),len(train_medium_set),len(train_long_set),
+            
+            
+            
+            
+            print('Splitting validation set by length\n=======================')
+            val_short_set,val_medium_set,val_long_set=cut_seq(val_set,low,medium,high,veryhigh,True)
+            val_mix_set,_,_=cut_seq(val_set,low,veryhigh,veryhigh+1,veryhigh+2,True)
+            val_short_len,val_medium_len,val_long_len=\
+            len(val_short_set),len(val_medium_set),len(val_long_set)
+
+            
+            if self.crop_val:val_mix_ds=2 
+            else: val_mix_ds=1
+            #make sure each machine gets the same num of batches otherwise it will hang
+            self.ts, self.tm, self.tl, self.vs, self.vm, self.vl=\
+                            train_short_len//(num_devices*num_nodes*bs_short),\
+                            train_medium_len//(num_devices*num_nodes*bs_medium),\
+                            train_long_len//(num_devices*num_nodes*bs_long),\
+                            val_short_len//(num_devices*num_nodes*bs_short),\
+                            val_medium_len//(num_devices*num_nodes*bs_medium),\
+                            val_long_len//(num_devices*num_nodes*bs_long)
+
+            if train_short_len:
+                self.train_short_dataloader = DataLoader(train_short_set, batch_size=bs_short,
+                                                    shuffle=True, num_workers=20,drop_last=True)
+                
+                self.train_medium_dataloader = DataLoader(train_medium_set, batch_size=bs_medium,
+                                                    shuffle=True, num_workers=20,drop_last=True)
+                self.train_long_dataloader = DataLoader(train_long_set, batch_size=bs_long,
+                                                shuffle=True, num_workers=20,drop_last=True)
+            self.val_short_dataloader = DataLoader(val_short_set, batch_size=1,
+                                            shuffle=False, num_workers=20,drop_last=True)
+            self.val_medium_dataloader = DataLoader(val_medium_set, batch_size=1,
+                                            shuffle=False, num_workers=20,drop_last=True)
+            
+            self.val_long_dataloader = DataLoader(val_long_set, batch_size=1,
+                                            shuffle=False, num_workers=20,drop_last=True)
+            self.val_mix_dataloader=DataLoader(val_mix_set, batch_size=val_mix_ds,
+                                            shuffle=False, num_workers=20,drop_last=True)
 
     def train_dataloader(self):
         current_epoch=self.trainer.current_epoch
-
+        if self.train_mix:
+            return self.train_mix_dataloader
         if self.which_dl=='short':
             self.trainer.limit_train_batches=self.ts-1
             self.trainer.which_dl='short'
@@ -373,6 +384,7 @@ class ProteinDataModule(pl.LightningDataModule):
             return self.train_long_dataloader
 
     def val_dataloader(self):
+        if self.train_mix:return self.val_mix_dataloader
         if self.mix_val:
             print('Evaluating validation with mixture of short,medium,long seqs')
 

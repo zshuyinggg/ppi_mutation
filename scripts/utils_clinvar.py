@@ -22,18 +22,18 @@ global top_path  # the path of the top_level directory
 global script_path, data_path, logging_path
 # from biotransformers import BioTransformers
 # add the top-level directory of this project to sys.path so that we can import modules without error
-
+pj=os.path.join
 top_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(top_path)
-script_path, data_path, logging_path= os.path.join(top_path,'scripts'), \
-    os.path.join(top_path,'data'), \
-    os.path.join(top_path,'logs')
+script_path, data_path, logging_path= pj(top_path,'scripts'), \
+    pj(top_path,'data'), \
+    pj(top_path,'logs')
 
 
 
 class MultiProcessClinvar():
     list_dfs=[]
-    def __init__(self,variant_summary_file=None,df=None,review_status=1,ref_uniprot_file='/home/grads/z/zshuying/Documents/shuying/ppi_mutation/data/single_protein_seq/uniprotids_humap_huri.txt') -> None:
+    def __init__(self,variant_summary_file=None,df=None,review_status=1,ref_uniprot_file=pj(data_path,'single_protein_seq/uniprotids_humap_huri.txt')) -> None:
         """
         if variant_summary_file is provided, then this instance is used to preprocess the variant_summary_file to a dataframe,
         if df is provide, then this instance is used to multiprocess the dataframe (get the uniprot and seqs)
@@ -45,15 +45,15 @@ class MultiProcessClinvar():
             print("Preprocess variant summary file done with review status = %s"%(review_status))
 
         else:
+            # print('df is not none',df)
             self.df=df 
-            # print('subprocess %s starts, with items total=%s'%(os.getpid(),len(df)))
-            print('subprocess %s starts, with items total=%s'%(os.getpid(),len(self.df[self.df.Seq.apply(lambda x:'soform' in x)])))#TODO
+            print('subprocess %s starts, with items total=%s'%(os.getpid(),len(df)))
     def process_variants_df(self,save_name):
         pid=os.getpid()
         tqdm_text = "#" + "{}".format(pid).zfill(3)
         cached_refseq,cached_uniprot,cached_seq=None,None,None
         with tqdm(total=len(self.df), desc=tqdm_text, position=pid+1) as pbar:
-            for i,idx in enumerate(self.df[self.df.Seq.apply(lambda x:'soform' in x)].index): #TODO
+            for i,idx in enumerate(self.df.index): 
                 current_refseq=get_refseq_from_name(self.df.loc[idx,'Name'])
                 if current_refseq==cached_refseq:
                     self.df.loc[idx,'UniProt']=cached_uniprot
@@ -184,10 +184,11 @@ def modify(seq,hgvs):
     obj=re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)',change)
     if '=' in change: #NM_000238.4(KCNH2):c.1539C>T (p.Phe513_Gly514=)	
         obj=re.match(r'([a-zA-Z]+)([0-9]+)',change.split('_')[0])
-        ori,pos=obj.group(1),int(obj.group(2))
-        try:assert ori==seq[pos-1]
-        except (AssertionError,IndexError):
-            new_seq='Error!! Isoform is probably wrong!!!' 
+        try:
+            ori,pos=obj.group(1),int(obj.group(2))
+            assert ori==seq[pos-1]
+        except:
+            new_seq='Error!! !!!' 
             return new_seq
         return seq[:pos-1]+seq[pos:]
     elif obj is None:
