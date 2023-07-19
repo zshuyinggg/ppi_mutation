@@ -471,7 +471,7 @@ class Esm_finetune(pl.LightningModule):
 
 
 class Esm_finetune_delta(Esm_finetune):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),crop_val=False,esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',include_wild=False,lr=None,crop_len=None,debug=False,crop_mode='random'):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),crop_val=False,esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',which_embds=0,lr=None,crop_len=None,debug=False,crop_mode='random'):
         """
 
         :param esm_model:
@@ -485,11 +485,10 @@ class Esm_finetune_delta(Esm_finetune):
         """
         super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr,crop_len=crop_len)
         self.batch_sample=batch_sample
-        self.include_wild=include_wild
+        self.which_embds=which_embds
         self.init_dataset()
         self.auroc=BinaryAUROC()
-        if self.include_wild:self.embs_dim=2*self.esm_model_dim
-        else:self.embs_dim=self.esm_model_dim
+        self.embs_dim=len(str(which_embds))*self.esm_model_dim
         self.proj=nn.Sequential(
             nn.Linear(self.embs_dim,2),
             nn.Softmax(dim=1)
@@ -549,7 +548,6 @@ class Esm_finetune_delta(Esm_finetune):
         len_seqs=[len(seq) for seq in seqs]
         # print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
         mutated_batch_samples=list(zip(labels,seqs))
-
         del seqs
         wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
         del batch
@@ -569,17 +567,12 @@ class Esm_finetune_delta(Esm_finetune):
         batch_size=wild_embs.shape[0]
 
         del mutated_batch_samples,wild_batch_samples
-        self.print_memory('before delta',detail=True)
 
         delta_embs=mutated_embs-wild_embs
-        self.print_memory('after delta',detail=True)
 
-        if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
-
-        else:embs=delta_embs
+        embs=self.define_embds(delta_embs,wild_embs,mutated_embs)
 
         y=self.proj(embs.float().to(self.device))
-        self.print_memory('after projection',detail=True)
 
         del delta_embs,mutated_embs,wild_embs,embs
 
@@ -588,10 +581,22 @@ class Esm_finetune_delta(Esm_finetune):
         self.train_out.append(torch.hstack([y,labels.reshape(batch_size,1)]).cpu())
 
         del y,labels
-        self.print_memory('end of the batch',detail=True)
 
         return loss
     
+
+    def define_embds(self,delta_embds,wild_embs,mutated_embs):
+        dict_embds={
+            '0':delta_embds,
+            '1':wild_embs,
+            '2':mutated_embs,
+        }
+        l=[]
+        for i in str(self.which_embds):
+            l.append(dict_embds[i])
+        return torch.hstack(l)
+
+
     def on_train_epoch_end(self) :
         all_preds=torch.vstack(self.train_out)
         all_preds_gather=self.all_gather(all_preds).view(-1,3)
@@ -645,9 +650,7 @@ class Esm_finetune_delta(Esm_finetune):
         delta_embs=mutated_embs-wild_embs
         self.print_memory('after delta',detail=True)
 
-        if self.include_wild:embs=torch.hstack([delta_embs,wild_embs])
-
-        else:embs=delta_embs
+        embs=self.define_embds(delta_embs,wild_embs,mutated_embs)
 
 
         y=self.proj(embs.float().to(self.device))
@@ -767,7 +770,6 @@ class Esm_finetune_delta(Esm_finetune):
     def center_crop(self,seq,pos):
         left_half=self.crop_len//2
         right_half=self.crop_len-left_half
-        np.random.seed(int('%d%d'%(self.trainer.current_epoch,self.trainer.global_step)))
         ideal_right=pos+right_half
         ideal_left=pos-left_half
 

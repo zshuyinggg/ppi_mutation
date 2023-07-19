@@ -66,7 +66,7 @@ class MultiProcessClinvar():
         # all uniprot ids that involve in PPI of humap and huri
         self.df = self.df[[uniprot in self.all_ppi_uniprot_ids for uniprot in self.df['UniProt'].tolist()]]
         #only include variants that are in PPI
-        self.df.to_csv('%s_%s.csv'%(save_name,pid))
+        # self.df.to_csv('%s_%s.csv'%(save_name,pid))
         return self.df
     def preprocess(self,variant_summary_file,review_status):
         f=pd.read_csv(variant_summary_file,sep='\t')
