@@ -28,6 +28,7 @@ def find_current_path():
 
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
+from scripts.utils_clinvar import *
 
 from scripts.utils import *
 import pandas as pd
@@ -116,7 +117,7 @@ class ProteinSequence(Dataset):
         uniprot = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('UniProt')]
         name = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Name')]
         labels=self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Label')]
-        sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int(),'UniProt':uniprot,'Name':name} #multiple or single?
+        sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int(),'UniProt':uniprot,'Name':name,'Loc':get_loc_from_name(name)} #multiple or single?
         if self.transform:
             sample=self.transform(sample)
         return sample

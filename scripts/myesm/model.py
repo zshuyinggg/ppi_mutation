@@ -219,7 +219,7 @@ class Esm_finetune(pl.LightningModule):
 
 
 class Esm_finetune_delta(Esm_finetune):
-    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),crop_val=False,esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',which_embds=0,lr=None,crop_len=None,debug=False,crop_mode='random',balanced_loss=False):
+    def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),crop_val=False,esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',which_embds=0,lr=None,crop_len=None,debug=False,crop_mode='random',balanced_loss=False,local_range=0):
         """
 
         :param esm_model:
@@ -234,10 +234,11 @@ class Esm_finetune_delta(Esm_finetune):
         super().__init__(esm_model,esm_model_dim,truncation_len,unfreeze_n_layers,repr_layers,lr,crop_len=crop_len)
         self.batch_sample=batch_sample
         self.which_embds=which_embds
+        self.local_range=local_range
         self.init_dataset()
         self.auroc=BinaryAUROC()
         self.auprc=AveragePrecision(task='binary')
-        self.embs_dim=len(str(which_embds))*self.esm_model_dim
+        self.embs_dim=self.get_embs_dim()
         self.proj=nn.Sequential(
             nn.Linear(self.embs_dim,2),
             nn.Softmax(dim=1)
@@ -257,8 +258,43 @@ class Esm_finetune_delta(Esm_finetune):
             self.ce_loss=Loss(loss_type="cross_entropy",class_balanced=True,samples_per_class=[13902,7706]) 
             print('Using Balanced CE Loss')
         else:
-            self.ce_loss=nn.functional.cross_entropy
+            self.ce_loss=torch.nn.CrossEntropyLoss()
             print('Using Normal CE Loss')
+
+    def get_embs_dim(self):
+        doc=''
+        dim=0
+        # print(self.which_embds)
+        # print(type(self.which_embds))
+        if '0' in self.which_embds:
+            dim+=self.esm_model_dim
+            doc+'delta_mean_embs;'
+            if '3' in self.which_embds:
+                dim+=self.esm_model_dim
+                doc+'delta_local_embs;'
+            if '4' in self.which_embds:
+                dim+=self.esm_model_dim
+                doc+'delta_aa_embs;'
+        if '1' in self.which_embds:
+            dim+=self.esm_model_dim
+            doc+'wild_mean_embs;'
+            if '3' in self.which_embds:
+                dim+=self.esm_model_dim
+                doc+'wild_local_embs;'
+            if '4' in self.which_embds:
+                dim+=self.esm_model_dim
+                doc+'wild_aa_embs;'
+        if '2' in self.which_embds:
+            dim+=self.esm_model_dim
+            doc+'mutated_mean_embs;'
+            if '3' in self.which_embds:
+                dim+=self.esm_model_dim
+                doc+'mutated_local_embs;'
+            if '4' in self.which_embds:
+                dim+=self.esm_model_dim
+                doc+'mutated_aa_embs;'
+        print('========',doc,'=========')
+        return dim
 
     def init_dataset(self):
         self.dataset=ProteinSequence()
@@ -300,38 +336,34 @@ class Esm_finetune_delta(Esm_finetune):
         torch.cuda.empty_cache()
         self.print_memory('entering training step',detail=True)
         labels=batch['label'].long()
+        # print(batch['Name'],batch['Loc'])
+        locs=batch['Loc'].long()
         seqs,starts,pos=self.crop_batch(batch,batch_idx)
         batch['seq']=seqs
-        len_seqs=[len(seq) for seq in seqs]
+        # len_seqs=[len(seq) for seq in seqs]
         # print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
-        mutated_batch_samples=list(zip(labels,seqs))
+        mutated_batch_samples=list(zip(locs,seqs))
         del seqs
-        wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
+        wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos) 
         del batch
         self.print_memory('initiated batches',detail=True)
-
-        try:
-            mutated_embs=self.get_esm_embedings(mutated_batch_samples)
-            self.print_memory('mutated_embs obtained',detail=True)
-
-            wild_embs=self.get_esm_embedings(wild_batch_samples)
-            self.print_memory('wild_embs obtained',detail=True)
-        except :
-            # print('\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
-            print([len(sample[1]) for sample in wild_batch_samples])
-            return 0
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,loc=locs,starts=starts,local_range=self.local_range)
+        self.print_memory('mutated_embs obtained',detail=True)
+        wild_embs=self.get_esm_embedings(wild_batch_samples,starts=starts,loc=locs,local_range=self.local_range)
+        self.print_memory('wild_embs obtained',detail=True)
+        # print(mutated_embs,wild_embs)
+        # print([len(sample[1]) for sample in wild_batch_samples])
+        # return 0
             
-        batch_size=wild_embs.shape[0]
+        batch_size=len(labels)
 
         del mutated_batch_samples,wild_batch_samples
 
-        delta_embs=mutated_embs-wild_embs
-
-        embs=self.define_embds(delta_embs,wild_embs,mutated_embs)
-
+        embs=self.define_embds(wild_embs,mutated_embs,verbose=True)
+        # print(embs)
         y=self.proj(embs.float().to(self.device))
 
-        del delta_embs,mutated_embs,wild_embs,embs
+        del mutated_embs,wild_embs,embs
 
         loss=self.ce_loss(y,labels)
         torch.cuda.empty_cache()
@@ -342,15 +374,44 @@ class Esm_finetune_delta(Esm_finetune):
         return loss
     
 
-    def define_embds(self,delta_embds,wild_embs,mutated_embs):
-        dict_embds={
-            '0':delta_embds,
-            '1':wild_embs,
-            '2':mutated_embs,
-        }
+    def define_embds(self,wild_embs,mutated_embs,verbose=False):
+
         l=[]
-        for i in str(self.which_embds):
-            l.append(dict_embds[i])
+        doc=''
+        wild_mean_embs,wild_local_embs,wild_AA_embs=wild_embs['sequence_representations'],wild_embs['local_representations'],wild_embs['AA_representations']
+        mutated_mean_embs,mutated_local_embs,mutated_AA_embs=mutated_embs['sequence_representations'],mutated_embs['local_representations'],mutated_embs['AA_representations']
+        delta_mean_embs=mutated_mean_embs-wild_mean_embs
+        delta_local_embs=mutated_local_embs-wild_local_embs
+        delta_AA_embs=mutated_AA_embs-wild_AA_embs
+
+        if '0' in self.which_embds:
+            l.append(delta_mean_embs)
+            doc+'delta_mean_embs;'
+            if '3' in self.which_embds:
+                l.append(delta_local_embs)
+                doc+'delta_local_embs;'
+            if '4' in self.which_embds:
+                l.append(delta_AA_embs)
+                doc+'delta_aa_embs;'
+        if '1' in self.which_embds:
+            l.append(wild_mean_embs)
+            doc+'wild_mean_embs;'
+            if '3' in self.which_embds:
+                l.append(wild_local_embs)
+                doc+'wild_local_embs;'
+            if '4' in self.which_embds:
+                l.append(wild_AA_embs)
+                doc+'wild_aa_embs;'
+        if '2' in self.which_embds:
+            l.append(mutated_mean_embs)
+            doc+'mutated_mean_embs;'
+            if '3' in self.which_embds:
+                l.append(mutated_local_embs)
+                doc+'mutated_local_embs;'
+            if '4' in self.which_embds:
+                l.append(mutated_AA_embs)
+                doc+'mutated_aa_embs;'
+        if verbose: print(doc)
         return torch.hstack(l)
 
 
@@ -372,50 +433,49 @@ class Esm_finetune_delta(Esm_finetune):
         self.proj.eval()
         torch.cuda.empty_cache()
         labels=batch['label'].long()
+        locs=batch['Loc'].long()
+
         if self.crop_val is False: #no cropping
             print('validation is not cropped')
             seqs=batch['seq']
-            mutated_batch_samples=list(zip(labels,seqs))
+            mutated_batch_samples=list(zip(locs,seqs))
             wild_batch_samples=self.get_wild_batch(batch,starts=[0]*len(seqs),pos=None)
         else:
             seqs,starts,pos=self.crop_batch(batch,batch_idx)
             batch['seq']=seqs
             len_seqs=[len(seq) for seq in seqs]
             # print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
-            mutated_batch_samples=list(zip(labels,seqs))
+            mutated_batch_samples=list(zip(locs,seqs))
             wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
 
             self.print_memory('initiated batches',detail=True)
         del seqs
 
         try:
-            mutated_embs=self.get_esm_embedings(mutated_batch_samples)
+            mutated_embs=self.get_esm_embedings(mutated_batch_samples,loc=locs,starts=starts,local_range=self.local_range)
             self.print_memory('mutated_embs obtained',detail=True)
 
-            wild_embs=self.get_esm_embedings(wild_batch_samples)
+            wild_embs=self.get_esm_embedings(wild_batch_samples,loc=locs,starts=starts,local_range=self.local_range)
             self.print_memory('wild_embs obtained',detail=True)
         except AttributeError:
             print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
             print(batch)
             return 0
-        batch_size=wild_embs.shape[0]
+        batch_size=len(labels)
 
         del mutated_batch_samples,wild_batch_samples,batch
-        #TODO: multichannel mlp
-        self.print_memory('before delta',detail=True)
 
-        delta_embs=mutated_embs-wild_embs
-        self.print_memory('after delta',detail=True)
-
-        embs=self.define_embds(delta_embs,wild_embs,mutated_embs)
-
-
+        embs=self.define_embds(wild_embs,mutated_embs)
         y=self.proj(embs.float().to(self.device))
         self.print_memory('after projection',detail=True)
 
-        del delta_embs,mutated_embs,wild_embs,embs
+        del mutated_embs,wild_embs,embs
 
         pred=torch.hstack([y,labels.reshape(batch_size,1)]).cpu()
+        val_loss=self.ce_loss(y,labels.long())
+        # print(y,labels)
+        # print(val_loss)
+
         self.val_out.append(pred)
         return pred
 
@@ -423,13 +483,17 @@ class Esm_finetune_delta(Esm_finetune):
         all_preds=torch.vstack(self.val_out)
         all_preds_gather=self.all_gather(all_preds).view(-1,3)
         val_auroc=self.auroc(all_preds.float()[:,1],all_preds.long()[:,-1])
+        val_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        
         val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         val_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
         self.log('val_loss',val_loss,sync_dist=True)
         self.log('val_auroc_gathered',val_auroc_gather)
+        self.log('val_auprc_gathered',val_auprc_gather)
         val_auroc_average=torch.mean(self.all_gather(val_auroc),dim=0)
         if self.trainer.global_rank==0:
             print('gathered auroc is %s'%val_auroc_gather)
+            print('gathered auprc is %s'%val_auprc_gather)
         del all_preds, val_auroc,val_loss
         self.val_out.clear()
 
@@ -437,49 +501,48 @@ class Esm_finetune_delta(Esm_finetune):
         self.esm_model.eval()
         self.proj.eval()
         torch.cuda.empty_cache()
+        locs=batch['Loc'].long()
+
         labels=batch['label'].long()
         if self.crop_val is False: #no cropping
             print('test is not cropped')
             seqs=batch['seq']
-            mutated_batch_samples=list(zip(labels,seqs))
+            mutated_batch_samples=list(zip(locs,seqs))
             wild_batch_samples=self.get_wild_batch(batch,starts=[0]*len(seqs),pos=None)
         else:
             seqs,starts,pos=self.crop_batch(batch,batch_idx)
             batch['seq']=seqs
             len_seqs=[len(seq) for seq in seqs]
             # print('===================================\nlength of seqs in this batch(%s) is %s\n========================='%(batch_idx,len_seqs),flush=True)
-            mutated_batch_samples=list(zip(labels,seqs))
+            mutated_batch_samples=list(zip(locs,seqs))
             wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos)
 
             self.print_memory('initiated batches',detail=True)
         del seqs
 
         try:
-            mutated_embs=self.get_esm_embedings(mutated_batch_samples)
+            mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts,loc=locs,local_range=self.local_range)
             self.print_memory('mutated_embs obtained',detail=True)
 
-            wild_embs=self.get_esm_embedings(wild_batch_samples)
+            wild_embs=self.get_esm_embedings(wild_batch_samples,starts=starts,loc=locs,local_range=self.local_range)
             self.print_memory('wild_embs obtained',detail=True)
         except AttributeError:
             print('\n',seqs,'\n',mutated_batch_samples,'\n',wild_batch_samples,'\n')
             print(batch)
             return 0
-        batch_size=wild_embs.shape[0]
+        batch_size=len(labels)
 
         del mutated_batch_samples,wild_batch_samples,batch
         #TODO: multichannel mlp
-        self.print_memory('before delta',detail=True)
 
-        delta_embs=mutated_embs-wild_embs
-        self.print_memory('after delta',detail=True)
 
-        embs=self.define_embds(delta_embs,wild_embs,mutated_embs)
+        embs=self.define_embds(wild_embs,mutated_embs)
 
 
         y=self.proj(embs.float().to(self.device))
         self.print_memory('after projection',detail=True)
 
-        del delta_embs,mutated_embs,wild_embs,embs
+        del mutated_embs,wild_embs,embs
 
         pred=torch.hstack([y,labels.reshape(batch_size,1)]).cpu()
         self.test_out.append(pred)
@@ -498,32 +561,46 @@ class Esm_finetune_delta(Esm_finetune):
         del all_preds
         self.test_out.clear()
     
-    def get_esm_embedings(self,batch_sample):
+    def get_esm_embedings(self,batch_sample,loc=None,local_range=0,starts=None):
         torch.cuda.empty_cache()
-        _, _, batch_tokens=self.batch_converter(batch_sample)
+        mutation_locs, _, batch_tokens=self.batch_converter(batch_sample)
+        for i in range(len(mutation_locs)):
+            if starts[i]:
+                mutation_locs[i]=int(mutation_locs[i])-int(starts[i])
         batch_tokens=batch_tokens.to(self.device)
-        # batch_labels=torch.stack(batch_labels)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         self.print_memory('inside get_esm_embeddings (1)',detail=True)
         results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
         self.print_memory('inside get_esm_embeddings (2)',detail=True)
 
         token_representations = results["representations"][self.repr_layers]
+
         self.print_memory('inside get_esm_embeddings (3)',detail=True)
 
         del results
         sequence_representations = []
+        local_representations=[]
+        AA_representations=[]
         for i, tokens_len in enumerate(batch_lens):
-            sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))
+            sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))    
+            # print(max(1,mutation_locs[i]-local_range+1),min(batch_lens[i],mutation_locs[i]+local_range+2))    
+            local_representations.append(token_representations[i,max(1,mutation_locs[i]-local_range+1):min(batch_lens[i],mutation_locs[i]+local_range+1)].mean(0))
+            # print(local_representations)
+            AA_representations.append(token_representations[i,mutation_locs[i]+1])
         self.print_memory('inside get_esm_embeddings (4)',detail=True)
         
         del token_representations
         torch.cuda.empty_cache()
-        sequence_representations=torch.stack(sequence_representations)
-        self.print_memory('inside get_esm_embeddings (5)',detail=True)
+        sequence_representations=torch.vstack(sequence_representations)
+        local_representations=torch.vstack(local_representations)
+        AA_representations=torch.vstack(AA_representations)
+        return_embds=[]
 
         del batch_lens,batch_tokens
-        return sequence_representations
+        return {'sequence_representations':sequence_representations,
+                'local_representations':local_representations,
+                'AA_representations':AA_representations
+        }
 
     def get_current_epoch_max_len(self):
         if self.trainer.which_dl=='short':
@@ -536,6 +613,7 @@ class Esm_finetune_delta(Esm_finetune):
     def get_wild_batch(self,mutated_batch,starts=None,pos=None):
         uniprots=mutated_batch['UniProt']
         mutants=mutated_batch['seq']
+        locs=mutated_batch['Loc']
         mutant_lens=[len(seq) for seq in mutants]
         seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
         batch_sample=[]
@@ -545,19 +623,19 @@ class Esm_finetune_delta(Esm_finetune):
             if starts[i]==0: #no random cropping
                 # print('this seq is not cropped as the length is %s, starts[i] is %s'%(len(seq),starts[i]))
                 lens.append(mutant_lens[i])
-                batch_sample.append((uniprots[i],seq[:mutant_lens[i]])) #the wild seq has to be of same length as the mutant
+                batch_sample.append((locs[i],seq[:mutant_lens[i]])) #the wild seq has to be of same length as the mutant
 
             elif starts[i] is not None: #if mutated sequences are cropped and a start is returned
                 seq=seq[starts[i]:starts[i]+self.crop_len]
-                batch_sample.append((uniprots[i],seq))
+                batch_sample.append((locs[i],seq))
                 lens.append(len(seq))
 
             elif starts[i] is None and len(seq)>self.crop_len: # if mutated seq is not cropped but the wild is too long
                 seq,_=self.crop(seq,pos[i])
-                batch_sample.append((uniprots[i],seq))
+                batch_sample.append((locs[i],seq))
                 lens.append(len(seq))
             else:
-                batch_sample.append((uniprots[i],seq))
+                batch_sample.append((locs[i],seq))
                 lens.append(len(seq))
             
                 
