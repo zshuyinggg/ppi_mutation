@@ -11,6 +11,8 @@ from torch import optim, nn, utils, Tensor
 import lightning.pytorch as pl
 import esm
 import torch.cuda as cuda
+# from torch_geometric.nn import GATConv, GINEConv, GCNConv
+
 from balanced_loss import Loss
 import torch.nn.functional as F
 import math
@@ -811,6 +813,40 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         del all_preds, val_auroc_gather, val_auprc_gather,val_loss
         self.val_out.clear()
 
+    def test_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        starts,labels,locs,mutated_batch_samples,wild_batch_samples=self.get_cropped_batch_samples(batch,batch_idx)
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
+        wild_embs=self.get_esm_embedings(wild_batch_samples,starts=starts)
+
+        embs=self.define_embds(wild_embs,mutated_embs)
+        y=self.proj(embs.float().to(self.device))
+
+        del mutated_embs,wild_embs,embs
+
+        loss=self.ce_loss(y,labels)
+        self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+
+        del y,labels
+
+        return loss
+
+    def on_test_epoch_end(self) :
+        all_preds=torch.vstack(self.test_out)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
+        test_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        test_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        test_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('test_loss',test_loss,sync_dist=True)
+        self.log('test_auroc_gathered',test_auroc_gather)
+        self.log('test_auprc_gathered',test_auprc_gather)
+        if self.trainer.global_rank==0:
+            print('\n------gathered auroc is %s----\n'%test_auroc_gather,flush=True)
+            print('\n------gathered auprc is %s----\n'%test_auprc_gather,flush=True)
+        del all_preds, test_auroc_gather, test_auprc_gather,test_loss
+        self.test_out.clear()
+
+
     def define_embds(self,wild_embs,mutated_embs):
 
         wild_mean_embs,wild_bin_embs=wild_embs['sequence_representations'],wild_embs['bin_representations']
@@ -1011,4 +1047,24 @@ class Attention_Weight(nn.Module):
         return weighted
     
 
+
+
+
+
+class gnn(nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        if args.gnn == 'gat': self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=args.hidden_dim, out_channels=args.hidden_dim//args.gat_attn_head, heads=args.gat_attn_head, edge_dim=args.edge_dim)
+                                                                    for _ in range(args.gnn_layer_num)] )
+        elif args.gnn == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(mlp(args.gin_mlp_layer, args.hidden_dim)), edge_dim=args.edge_dim)
+                                                                    for _ in range(args.gnn_layer_num)] )
+        self.relu = nn.ReLU()
     
+    def forward(self, x, edge_index, edge_attr):
+        x_sum = x
+        for gnnconv in self.gnnconv_list:
+            x = self.relu(x)
+            x = gnnconv(x=x, edge_index=edge_index, edge_attr=edge_attr)
+            x_sum = x_sum + x
+        x = x_sum / (len(self.gnnconv_list) + 1)
+        return x

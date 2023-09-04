@@ -64,7 +64,7 @@ num_devices=args.numdevices
 num_nodes=args.numnodes
 unfreeze_layers=args.unfreeze
 esm_model=args.esm
-
+ckpt='/scratch/user/zshuying/ppi_mutation/logs/esm_finetune_delta_ddp/2019/esm2_t6_8M_UR50D/83001_1050_multiweight_grace1050_multiweight_8bins_-epoch=04-val_loss=0.42.ckpt'
 pj=os.path.join
 if __name__ == '__main__':
     seed_everything(args.seed, workers=True)
@@ -80,9 +80,9 @@ if __name__ == '__main__':
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=10, verbose=True, mode="min")
 
     test_data=ProteinDataModule(test=True,clinvar_csv=pj(data_path,'clinvar/mutant_seq_2019_test_no_error.csv'),crop_val=True,train_val_ratio=0.000001,low=None,medium=None,high=None,veryhigh=None,discard=False,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= 2,bs_medium=2,bs_long=2,mix_val=True,train_mix=True,random_seed=args.seed)
-    myesm=Esm_delta_multiscale_weight(num_bins=8,bin_one_side_distance=[0,2,4,8,16,32,128,256],esm_model=eval("esm.pretrained.%s()"%esm_model),esm_model_dim=args.esm_dim,repr_layers=args.esm_layers,unfreeze_n_layers=unfreeze_layers,lr=bs*num_devices*num_nodes*1e-6)
+    myesm=Esm_delta_multiscale_weight(num_bins=8,bin_one_side_distance=[0,2,4,8,16,32,128,256],esm_model=eval("esm.pretrained.%s()"%esm_model),esm_model_dim=args.esm_dim,repr_layers=args.esm_layers,unfreeze_n_layers=unfreeze_layers,lr=bs*num_devices*num_nodes*1e-6).load_from_checkpoint(ckpt)
     logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp','2019'),name="%s"%esm_model,version='%s_%s'%(args.version,args.seed))
-
+    print('so far all good')
     if num_devices>1:
         trainer=pl.Trainer(max_epochs=200, 
                         logger=logger,devices=num_devices, 
@@ -105,6 +105,8 @@ if __name__ == '__main__':
                         plugins=[SLURMEnvironment(auto_requeue=False)])
                         #    reload_dataloaders_every_n_epochs=1)
         
-    trainer.datamodule=proData
-    trainer.fit(model=myesm,datamodule=proData)
+    # trainer.datamodule=proData
+    trainer.datamodule=test_data
+    trainer.test(model=myesm,datamodule=test_data,ckpt_path=ckpt)
+    # trainer.fit(model=myesm,datamodule=proData,ckpt_path=ckpt)
 
