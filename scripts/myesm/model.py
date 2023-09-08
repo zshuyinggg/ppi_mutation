@@ -13,7 +13,6 @@ import esm
 import torch.cuda as cuda
 # from torch_geometric.nn import GATConv, GINEConv, GCNConv
 
-from balanced_loss import Loss
 import torch.nn.functional as F
 import math
 
@@ -672,7 +671,7 @@ class Esm_finetune_delta(Esm_finetune):
 
 
 class Esm_delta_multiscale_weight(Esm_finetune_delta):
-    def __init__(self,esm_model,esm_model_dim,repr_layers,lr,unfreeze_n_layers,num_bins=8,bin_one_side_distance=[0,2,4,8,16,32,128,256]):
+    def __init__(self,esm_model,esm_model_dim,repr_layers,lr,unfreeze_n_layers,num_bins=8,bin_one_side_distance=[0,2,4,8,16,32,128,256],save_embeddings=False):
         self.num_bins=num_bins
         super().__init__(esm_model=esm_model,esm_model_dim=esm_model_dim,repr_layers=repr_layers,lr=lr,unfreeze_n_layers=unfreeze_n_layers)
         self.bin_one_side_distance=bin_one_side_distance
@@ -686,6 +685,10 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         self.auroc=BinaryAUROC()
         self.auprc=AveragePrecision(task='binary')
        
+        self.save_embeddings=save_embeddings
+        self.val_embds={}
+        self.test_embds={}
+
         self.val_out=[]
         self.test_out=[]
         self.train_out=[]
@@ -787,6 +790,10 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         wild_embs=self.get_esm_embedings(wild_batch_samples,starts=starts)
 
         embs=self.define_embds(wild_embs,mutated_embs)
+        if self.save_embeddings:
+            for i in range(embs.shape[0]):
+                self.val_embds[batch['Name'][i]]={'embs':embs[i,:].cpu(),'UniProt':batch['UniProt'][i],'Loc':locs[i],'label':labels[i]}
+                
         y=self.proj(embs.float().to(self.device))
 
         del mutated_embs,wild_embs,embs
@@ -804,16 +811,18 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         val_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
         val_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('val_loss',val_loss,sync_dist=True)
-        self.log('val_auroc_gathered',val_auroc_gather)
-        self.log('val_auprc_gathered',val_auprc_gather)
+        # self.log('val_loss',val_loss,sync_dist=True)
+        # self.log('val_auroc_gathered',val_auroc_gather)
+        # self.log('val_auprc_gathered',val_auprc_gather)
         if self.trainer.global_rank==0:
             print('\n------gathered auroc is %s----\n'%val_auroc_gather,flush=True)
             print('\n------gathered auprc is %s----\n'%val_auprc_gather,flush=True)
         del all_preds, val_auroc_gather, val_auprc_gather,val_loss
         self.val_out.clear()
+        if self.val_embds:
+            torch.save(self.val_embds,'/scratch/user/zshuying/ppi_mutation/data/baseline0/val_embds_%s.pt'%self.trainer.global_rank)
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx,save_embeddings=False):
         torch.cuda.empty_cache()
         starts,labels,locs,mutated_batch_samples,wild_batch_samples=self.get_cropped_batch_samples(batch,batch_idx)
         mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
@@ -870,6 +879,87 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         multiscale_bins=[([],i) for i in self.bin_one_side_distance]
         return multiscale_bins
 
+
+
+class Esm_multiscale_wildonly(Esm_delta_multiscale_weight):
+    def __init__(self,esm_model,esm_model_dim,repr_layers,lr,unfreeze_n_layers,num_bins=8,bin_one_side_distance=[0,2,4,8,16,32,128,256],save_embeddings=True):
+        super().__init__(esm_model,esm_model_dim,repr_layers,lr,unfreeze_n_layers,num_bins,bin_one_side_distance,True)
+    
+    def validation_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        uniprots,random_cropped_wild=self.random_crop_wild(batch)
+        wild_embs=self.get_esm_embedings(random_cropped_wild)
+        embs=self.define_embds(wild_embs)
+        for i in range(embs.shape[0]):
+            self.val_embds[batch['UniProt'][i]]={'embs':embs[i,:].cpu()}
+        print('working')
+        y=self.proj(embs.float().to(self.device))
+        return y
+
+
+    def define_embds(self,wild_embs):
+        wild_mean_embs,wild_bin_embs=wild_embs['sequence_representations'],wild_embs['bin_representations']
+        delta_mean_embs,delta_bin_embs=torch.zeros_like(wild_mean_embs).to(wild_mean_embs),torch.zeros_like(wild_bin_embs.to(wild_mean_embs))
+        l=[wild_mean_embs,wild_bin_embs,delta_mean_embs,delta_bin_embs]
+        # for item in l:
+        #     print(item.device)
+        return torch.hstack(l)
+    
+    def random_crop_wild(self,batch):
+        # print(batch)
+        seqs=batch['seq']
+        # print(seqs)
+        uniprots=batch['UniProt']
+        batch_after=[]
+        for i in range(len(seqs)):
+            seq=seqs[i]
+            uniprot=uniprots[i]
+            try:seq_len=len(seq)
+            except TypeError: continue
+            if seq_len>1500:
+                left_max=seq_len-1500
+                start=np.random.randint(0,left_max+1)
+            else:
+                start=0
+            batch_after.append((uniprot,seq[start:start+1500]))
+        return uniprots,batch_after
+    def on_validation_epoch_end(self) :
+        torch.save(self.val_embds,'/scratch/user/zshuying/ppi_mutation/data/baseline0/all_wild_embeddings_%s.pt'%self.trainer.global_rank)
+     
+
+    
+    def get_esm_embedings(self,batch_sample):
+        _, _, batch_tokens=self.batch_converter(batch_sample)
+        batch_tokens=batch_tokens.to(self.device)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
+
+        token_representations = results["representations"][self.repr_layers]
+
+        del results
+        
+        bin_representations=[]
+        sequence_representations=[]
+        for i in range(len(batch_lens)):
+            l=[] 
+            for j,(_,one_side_len) in enumerate(self.multiscale_bins()):
+                # left=max(1,mutation_locs[i]-one_side_len+1)
+                # right=min(batch_lens[i],mutation_locs[i]+one_side_len+2)
+                # weight_left_distance=one_side_len-mutation_locs[i] if left==1 else 0
+                # weight_right_distance=mutation_locs[i]+one_side_len+2-batch_lens[i] if right==batch_lens[i] else 0
+                # l.append(torch.matmul(self.Weights[j](range(weight_left_distance,2*one_side_len+1-weight_right_distance)).T,token_representations[i,left:right]))
+                l.append(torch.zeros((1,self.esm_model_dim)))
+            bin_representations.append(torch.hstack(l))
+            sequence_representations.append(token_representations[i, 1: batch_lens[i] - 1].mean(0))    
+
+        del token_representations
+        torch.cuda.empty_cache()
+        sequence_representations=torch.vstack(sequence_representations)
+        bin_representations=torch.vstack(bin_representations)
+        del batch_lens,batch_tokens
+        return {'sequence_representations':sequence_representations,
+                'bin_representations':bin_representations.to(sequence_representations),
+        }
 
 class WeightModule(pl.LightningModule):
     def __init__(self,num_weights):

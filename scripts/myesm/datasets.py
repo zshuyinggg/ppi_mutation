@@ -1,5 +1,5 @@
 import copy
-from lightning.pytorch.utilities.types import EVAL_DATALOADERS
+from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 
 import torch
 from torch.utils.data import Dataset
@@ -38,6 +38,27 @@ from torchvision import transforms, utils
 
 # num_partitions = multiprocessing.cpu_count()-4
 num_partitions = 28
+
+
+class ProteinEmbeddings(Dataset):
+    def __init__(self,embedding_path,clinvar_csv) -> None:
+        super().__init__()
+        self.embeddings=torch.load(embedding_path)
+        self.all_sequences = pd.read_csv(clinvar_csv)
+
+    def __len__(self):
+        return len(self.embeddings)
+
+    def __getitem__(self, idx, uniprot=None, label=None):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        sequences = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Seq')]
+        uniprot = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('UniProt')]
+        name = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Name')]
+        labels=self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Label')]
+        sample={'label':torch.tensor(labels).int(),'UniProt':uniprot,'Name':name,'Loc':get_loc_from_name(name)} #multiple or single?
+
+        return sample
 
 
 
@@ -133,6 +154,18 @@ class ProteinSequence(Dataset):
 
         return df
 
+class ProteinWildSequence(Dataset):
+    def __init__(self,file_path='/scratch/user/zshuying/ppi_mutation/ppi_seq_huri_humap.csv'):
+  
+        self.df_ppi=pd.read_csv(file_path)
+
+    def __len__(self):
+        return len(self.df_ppi)
+    
+    def __getitem__(self,idx):
+        uniprot,sequence=self.df_ppi.iloc[idx,:]['UniProt'],self.df_ppi.iloc[idx,:]['seq']
+        return{'seq':sequence,'UniProt':uniprot}
+
 
 
 
@@ -186,7 +219,7 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 
 
 class ProteinDataModule(pl.LightningDataModule):
-    def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,crop_val=False,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,crop_len=False,which_dl=None,clinvar_csv=os.path.join(script_path,'merged_2019_1.csv'),mix_val=False,train_mix=False,random_seed=42,test=False,):
+    def __init__(self, low=0,medium=0,high=0,veryhigh=0,train_val_ratio=0.9,discard=True,crop_val=False,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,crop_len=False,which_dl=None,clinvar_csv=os.path.join(script_path,'merged_2019_1.csv'),mix_val=False,train_mix=False,random_seed=42,test=False,):
         super().__init__()
         self.dataset=ProteinSequence(clinvar_csv=clinvar_csv,delta=delta,random_seed=random_seed)
         self.crop_len=crop_len
@@ -341,14 +374,33 @@ class ProteinDataModule(pl.LightningDataModule):
             self.trainer.limit_val_batches=self.vl-1
             return self.val_long_dataloader
 
-    def test_dataloader(self) -> EVAL_DATALOADERS:
+    def test_dataloader(self) :
         return self.val_mix_dataloader
 
 
+class AllProteinVariantData(ProteinDataModule):
+    """
+    Subclass of ProteinSequence, without dividing train,val,test
+    """
 
+    def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'),batch_size=20,num_workers=15):
+        super().__init__(clinvar_csv=clinvar_csv)
+        self.batch_size=batch_size
+        self.num_workers=num_workers
+        self.dataset=ProteinSequence(clinvar_csv=clinvar_csv,delta=True)
+    def val_dataloader(self):
+        return DataLoader(self.dataset,batch_size=self.batch_size,shuffle=False, num_workers=self.num_workers,drop_last=True)
+    def test_dataloader(self):
+        return DataLoader(self.dataset,batch_size=self.batch_size,shuffle=False, num_workers=self.num_workers,drop_last=True)
 
-
-
+class AllWildData(pl.LightningDataModule):
+    def __init__(self):
+        super().__init__()
+        self.dataset=ProteinWildSequence()
+    def train_dataloader(self) :
+        return DataLoader(self.dataset,shuffle=False,batch_size=20,num_workers=15)
+    def val_dataloader(self) :
+        return DataLoader(self.dataset,shuffle=False,batch_size=20,num_workers=15)
 
 class EsmMeanEmbeddings(Dataset):
     def __init__(self,if_initial_merge=False,dirpath=data_path):
@@ -409,41 +461,6 @@ class EsmMeanEmbeddings(Dataset):
     def __getitem__(self, idx):
         return {'embedding':self.embeddings[idx,:],
                 'label':self.labels[idx]}
-
-
-class toHF(object):
-    """add space in between each amino acid in order to put it in tokenizer of huggingface"""
-    def __call__(self,sample):
-        sequences=sample['seq']
-        sequences=" ".join(list(sequences))
-        sample['seq']=sequences 
-        return sample
-
-
-class ToTensor(object):
-    """convert pandas object to Tensors"""
-
-    def __call__(self,sample):
-        idx,sequences,labels=sample['idx'],sample['seq'],sample['label']
-        return {'idx':torch.tensor(idx),
-        'seq':torch.tensor(sequences),
-        'label':torch.tensor(labels)}
-
-
-class RandomCrop(object):
-    def __init__(self,crop_size):
-        assert isinstance(crop_size,int)
-        self.crop_size=crop_size
-
-    def __call__(self,sample):
-        sequence=sample['seq']
-        l=len(sequence)
-        if self.crop_size<l:
-            start=np.random.randint(0,l-self.crop_size)
-        else:
-            start=0
-        new_seq=sequence[start:]
-        return {'idx':sample['idx'], 'seq':new_seq,'label':sample['label']}
 
 
 

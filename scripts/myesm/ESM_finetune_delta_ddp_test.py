@@ -71,12 +71,11 @@ ckpt=args.ckpt
 if __name__ == '__main__':
     seed_everything(args.seed, workers=True)
     bs=20
-    proData=ProteinDataModule(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_1_no_error.csv'),crop_val=True, train_val_ratio=0.8,low=None,medium=None,high=None,veryhigh=None,discard=False,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= bs,bs_medium=bs,bs_long=bs,mix_val=True,train_mix=True,random_seed=args.seed)
+    proData=AllProteinData(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_1_no_error.csv'),batch_size=20,num_workers=20)
 
     test_data=ProteinDataModule(test=True,clinvar_csv=pj(data_path,'clinvar/mutant_seq_2019_test_no_error.csv'),crop_val=True,train_val_ratio=0.000001,low=None,medium=None,high=None,veryhigh=None,discard=False,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= 2,bs_medium=2,bs_long=2,mix_val=True,train_mix=True,random_seed=args.seed)
     myesm=Esm_finetune_delta(which_embds=args.which_embds).load_from_checkpoint(ckpt,which_embds=args.which_embds)
 
-    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp','2019'),name="%s"%esm_model,version='%s_%s'%(args.version,args.seed))
 
     trainer=pl.Trainer(max_epochs=200, 
                     logger=logger,devices=num_devices, 

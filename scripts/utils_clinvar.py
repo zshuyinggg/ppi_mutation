@@ -32,7 +32,6 @@ script_path, data_path, logging_path= pj(top_path,'scripts'), \
 
 
 class MultiProcessClinvar():
-    list_dfs=[]
     def __init__(self,variant_summary_file=None,df=None,review_status=1,ref_uniprot_file=pj(data_path,'single_protein_seq/uniprotids_humap_huri.txt')) -> None:
         """
         if variant_summary_file is provided, then this instance is used to preprocess the variant_summary_file to a dataframe,
@@ -87,7 +86,37 @@ class MultiProcessClinvar():
         print(f.head(5))
         print('Total: %s rows'%len(f_simple.index))
         return f_simple
+    
 
+
+import functools
+
+@functools.lru_cache(maxsize=128)
+def get_sequence_from_uniprot_id_cached(id):
+    url = f'https://www.uniprot.org/uniprot/{id}.fasta'
+    response = requests.get(url)
+    if response.ok:
+        seq = ''.join(response.text.strip().split('\n')[1:])
+        if seq.isupper():
+            return seq
+    return None
+
+class MultiProcessUniProt():
+    list_dfs=[]
+    def __init__(self,df) -> None:
+        """
+        """
+        self.df=df
+    def process_ppi_df(self,save_name):
+        pid=os.getpid()
+        tqdm_text = "#" + "{}".format(pid).zfill(3)
+        with tqdm(total=len(self.df), desc=tqdm_text, position=pid+1) as pbar:
+            for i,idx in enumerate(self.df.index): 
+                self.df.loc[idx,'seq']=get_sequence_from_uniprot_id_cached(self.df.loc[idx,'UniProt'])
+                pbar.update(1)
+        self.df=self.df[self.df['seq'].notna()]
+        return self.df
+    
 
 
 
