@@ -125,9 +125,6 @@ class ProteinSequence(Dataset):
         # self.all_sequences.to_csv(self.gen_file_path)
 
 
-    
-
-
     def __len__(self):
         return len(self.all_sequences)
 
