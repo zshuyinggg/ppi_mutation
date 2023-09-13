@@ -34,7 +34,7 @@ sys.path.append(top_path)
 from scripts.utils import *
 from torch_geometric.nn import GATConv, GINEConv, GCNConv
 
-class mlp(nn.Module):
+class MLP(nn.Module):
     def __init__(self, layer_num, hidden_dim):
         super().__init__()
         self.relu = nn.ReLU()
@@ -47,7 +47,7 @@ class mlp(nn.Module):
         return x
 
 
-class gnn(pl.LightningModule):
+class GNN(pl.LightningModule):
     def __init__(self, args):
         super().__init__()
         if args.gnn == 'gat': self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=args.hidden_dim, out_channels=args.hidden_dim//args.gat_attn_head, heads=args.gat_attn_head, edge_dim=1)

@@ -23,9 +23,14 @@ class VariantPPI(Dataset):
     def __init__(self, root, clinvar_csv, variant_embedding_path, wild_embedding_path, transform=None, pre_transform=None, pre_filter=None):
         self.clinvar_csv=pd.read_csv(clinvar_csv)
         self.variant_embeddings=torch.load(variant_embedding_path)
-        self.wild_embeddings=torch.load(wild_embedding_path)
+        self.wild_embedding_path=wild_embedding_path
+        self.wild_embeddings=torch.load(self.wild_embedding_path)
         super().__init__(root, transform, pre_transform, pre_filter)
-
+        self.dic_index2wild_embeddings=self.get_all_indexed_wild_embeddings()
+        self.get_edge_index()
+        with open(pj(self.processed_dir,'variant_name_list.txt'),'r') as f:
+            self.variant_name_list=eval(f.readline())
+        self.num_nodes=len(self.dic_index2wild_embeddings)
 
     @property
     def processed_file_names(self):
@@ -34,32 +39,32 @@ class VariantPPI(Dataset):
 
     def process(self):
         # read variant
+        self.wild_embeddings=torch.load(self.wild_embedding_path)
         dic_index2wild_embeddings=self.get_all_indexed_wild_embeddings()
         num_nodes=len(dic_index2wild_embeddings)
         self.get_edge_index()
-        idx = 0
-        for name in self.clinvar_csv['Name'].tolist():
-            if f'data_{idx}.pt' in os.listdir(self.processed_dir):
-                idx+=1
-                continue
+        self.variant_name_list=self.clinvar_csv['Name'].tolist()
+        for name in self.variant_name_list:
             try:
-                variant_embeddings,variant_uniprot,variant_label=self.variant_embeddings[name]['embs'],self.variant_embeddings[name]['UniProt'],self.variant_embeddings[name]['label']
-                index_variant=self.dic_uniprot2idx[variant_uniprot]
-
-                ppi_with_variant_embeddings=torch.vstack([dic_index2wild_embeddings[i] if i!=index_variant else variant_embeddings for i in range(len(dic_index2wild_embeddings))])
-                data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.edge_index,y=[variant_label],num_nodes=num_nodes)
-                torch.save(data, pj(self.processed_dir, f'data_{idx}.pt'))
-                print(f'data_{idx}.pt saved')
-                idx += 1
+                uniprot=self.variant_embeddings[name]['UniProt']  #check if the variant embedding was not skipped due to drop_last=True
+                idx=self.dic_uniprot2idx[uniprot]
             except KeyError:
-                print('the embedding of %s is not found. Probably due to the drop_last=True of dataloader in embeddings_from_baseline0.py. Skipping.'%name)
-                continue
+                self.variant_name_list.remove(name)
+
+        with open(pj(self.processed_dir,'variant_name_list.txt'),'w') as f:
+            f.writelines(str(self.variant_name_list))
+            print('Processed variant name list')
+
         
     def len(self):
-        return len(self.processed_file_names)
+        return len(self.variant_name_list)
 
     def get(self, idx):
-        data = torch.load(pj(self.processed_dir, f'data_{idx}.pt'))
+        name=self.variant_name_list[idx]
+        variant_embeddings,variant_uniprot,variant_label=self.variant_embeddings[name]['embs'],self.variant_embeddings[name]['UniProt'],self.variant_embeddings[name]['label']
+        index_variant=self.dic_uniprot2idx[variant_uniprot]
+        ppi_with_variant_embeddings=torch.vstack([self.dic_index2wild_embeddings[i] if i!=index_variant else variant_embeddings for i in range(len(self.dic_index2wild_embeddings))])
+        data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.edge_index,y=[variant_label],num_nodes=self.num_nodes)
         return data
 
     def get_all_indexed_wild_embeddings(self):

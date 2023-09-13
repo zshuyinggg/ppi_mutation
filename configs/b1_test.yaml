@@ -1,0 +1,10 @@
+data_init:
+    root: /scratch/user/zshuying/ppi_mutation/data/baseline1
+    clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_1_no_error.csv
+    variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_variant_embds.pt
+    wild_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/all_wild_embeddings.pt
+    batch_size: 20
+    num_workers: 15
+    random_seed: 1050
+    train_val_ratio: 0.8
+
