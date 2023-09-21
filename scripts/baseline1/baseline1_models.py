@@ -12,7 +12,7 @@ from torch import optim, nn, utils, Tensor
 import lightning.pytorch as pl
 import esm
 import torch.cuda as cuda
-
+from datasets_baseline1 import *
 import torch.nn.functional as F
 
 from torchmetrics.classification import BinaryAUROC, MulticlassAUROC
@@ -48,22 +48,30 @@ class MLP(nn.Module):
 
 
 class GNN(pl.LightningModule):
-    def __init__(self, args):
+    def __init__(self, gnn_type, node_dim, num_gnn_layers, gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False):
         super().__init__()
-        if args.gnn == 'gat': self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=args.hidden_dim, out_channels=args.hidden_dim//args.gat_attn_head, heads=args.gat_attn_head, edge_dim=1)
-                                                                    for _ in range(args.gnn_layer_num)] )
-        elif args.gnn == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(mlp(args.gin_mlp_layer, args.hidden_dim)))
-                                                                    for _ in range(args.gnn_layer_num)] )
+        self.sampler=sampler
+        if gnn_type == 'gat': self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=node_dim, out_channels=node_dim//gat_attn_head, heads=gat_attn_head, edge_dim=1)
+                                                                    for _ in range(num_gnn_layers)] )
+        elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_dim,out_channels=node_dim)
+                                                                    for _ in range(num_gnn_layers)] )
+        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(MLP(gin_mlp_layer, node_dim)))
+                                                                    for _ in range(num_gnn_layers)] )
         self.relu = nn.ReLU()
+        self.node_dim=node_dim
         self.classifier=nn.Sequential(
-            nn.Linear(args.hidden_dim*2,args.hidden_dim),
+            nn.Linear(node_dim*2,node_dim),
             nn.ReLU(),
-            nn.Linear(args.hidden_dim,2),
+            nn.Linear(node_dim,2),
             nn.Softmax(dim=1)
         )
+        self.lr=lr
         self.train_out=[]
         self.val_out=[]
         self.ce_loss=nn.CrossEntropyLoss()
+        self.auroc=BinaryAUROC()
+        self.auprc=AveragePrecision(task='binary')
+
     def forward(self, x, edge_index):
         x_sum = x
         for gnnconv in self.gnnconv_list:
@@ -73,17 +81,36 @@ class GNN(pl.LightningModule):
         x = x_sum / (len(self.gnnconv_list) + 1)
         return x
 
-    def training_step(self, batch,batch_idx):
-        node_embs,variant_embs,_=batch.x
-        edge_index=batch.edge_index
-        labels=batch.y
-        x=self.forward(node_embs,edge_index)
-        y=self.classifier(x)
-        loss=self.ce_loss(y,labels)
-        self.train_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
-        return loss
+    def training_step(self, batch, batch_idx):
+        if self.sampler:
+            #get subgraph:
+            random_walk_sampler=VariantRandomWalkSampler(batch,batch_size=4,walk_length=10)
+            for subgraph in random_walk_sampler:
+                pass
+        else:
+            node_embs,variant_embs,variant_indices=batch.x[0],batch.x[1],batch.x[2]
+            self.adj = SparseTensor.from_edge_index(batch.edge_index)
+            labels=batch.y[0]
+            # print(labels)
+            x=self.forward(node_embs,self.adj)
+            x_reshaped=x.view(len(labels),-1, self.node_dim) # (batch_size, num_node, node_dim)
+            # print(x_reshaped.shape)
+            variants_aftergnn=[]
+            for i in range(len(labels)):
+                variants_aftergnn.append(x_reshaped[i,variant_indices[i],:].view(1,-1))
+            variants_aftergnn=torch.vstack(variants_aftergnn)
+            variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
+            x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
+            y=self.classifier(x2classify)
+            loss=self.ce_loss(y,labels)
+            self.train_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+            print(torch.cuda.max_memory_reserved()/ 1024 ** 3 )
+            return loss
 
-
+    def configure_optimizers(self,lr = None) :
+        optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
+        return optimizer
+    
     def on_train_epoch_end(self) :
         all_preds=torch.vstack(self.train_out)
         all_preds_gather=self.all_gather(all_preds).view(-1,3)
@@ -102,11 +129,15 @@ class GNN(pl.LightningModule):
 
 
     def validation_step(self, batch,batch_idx):
-        node_embs=batch.x
-        edge_index=batch.edge_index
-        labels=batch.y
+        node_embs,variant_embs,variant_idx=batch.x[0],batch.x[1],batch.x[2]
+        edge_index=batch.edge_index[:batch.num_nodes,:batch.num_nodes]
+        labels=batch.y[0]
         x=self.forward(node_embs,edge_index)
-        y=self.classifier(x)
+        x_reshaped=x.view(len(labels),-1, self.node_dim)
+        variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
+        variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
+        x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
+        y=self.classifier(x2classify)
         loss=self.ce_loss(y,labels)
         self.val_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
         return loss

@@ -3,11 +3,13 @@ import torch
 from torch_geometric.data import Data
 global top_path,script_path, data_path, logging_path
 import os, sys
-from torch_geometric.loader import DataLoader
+from torch_geometric.loader import DataLoader, NodeLoader
 import lightning.pytorch as pl
 import torch.utils.data as data
 from torch_geometric.data import Dataset
 import pandas as pd
+from torch_geometric.loader import GraphSAINTRandomWalkSampler
+from torch_sparse import SparseTensor
 
 def find_current_path():
     if getattr(sys, 'frozen', False):current = sys.executable
@@ -61,10 +63,12 @@ class VariantPPI(Dataset):
 
     def get(self, idx):
         name=self.variant_name_list[idx]
+
         variant_embeddings,variant_uniprot,variant_label=self.variant_embeddings[name]['embs'],self.variant_embeddings[name]['UniProt'],self.variant_embeddings[name]['label']
         index_variant=self.dic_uniprot2idx[variant_uniprot]
         ppi_with_variant_embeddings=torch.vstack([self.dic_index2wild_embeddings[i] if i!=index_variant else variant_embeddings for i in range(len(self.dic_index2wild_embeddings))])
         data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.edge_index,y=[variant_label],num_nodes=self.num_nodes)
+        # data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.adj,y=[variant_label],num_nodes=self.num_nodes)
         return data
 
     def get_all_indexed_wild_embeddings(self):
@@ -79,10 +83,11 @@ class VariantPPI(Dataset):
         with open(pj(top_path,'ppi_huri_humap.txt'),'r') as f:
             interactions=eval(f.readline())
         exclude_self=[item for item in interactions if '-' in item]
-        indexed_interactions_eges=[[dic_uniprot2idx[item.split('-')[0]],dic_uniprot2idx[item.split('-')[1]]] for item in exclude_self]
-        indexed_interactions_eges_reverse=[[dic_uniprot2idx[item.split('-')[0]],dic_uniprot2idx[item.split('-')[1]]] for item in exclude_self]
-        edge_index=torch.tensor(indexed_interactions_eges+indexed_interactions_eges_reverse,dtype=torch.long)
+        indexed_interactions_edges=[[dic_uniprot2idx[item.split('-')[0]],dic_uniprot2idx[item.split('-')[1]]] for item in exclude_self]
+        indexed_interactions_edges_reverse=[[dic_uniprot2idx[item.split('-')[0]],dic_uniprot2idx[item.split('-')[1]]] for item in exclude_self]
+        edge_index=torch.tensor(indexed_interactions_edges+indexed_interactions_edges_reverse,dtype=torch.long)
         self.edge_index=edge_index.t().contiguous()
+
         return
 
 
@@ -115,3 +120,27 @@ class VariantPPIModule(pl.LightningDataModule):
     
     def val_dataloader(self) :
         return DataLoader(self.valset,shuffle=False,batch_size=self.batch_size,num_workers=self.num_workers)
+    
+
+
+class VariantRandomWalkLoader(NodeLoader):
+    def __init__(data, node_sampler, input_nodes,filter_per_worker=True):
+        
+        pass
+
+class VariantRandomWalkSampler(GraphSAINTRandomWalkSampler):
+    def __init__(self, data, batch_size: int, walk_length: int,
+                 num_steps: int = 1, sample_coverage: int = 0,
+                 save_dir=None, log: bool = True, **kwargs):
+        self.walk_length = walk_length
+        data.num_nodes=data.Dataset[0].num_nodes
+        data.num_edges=data.Dataset[0].num_edges
+        data.edge_index=data.Dataset[0].edge_index
+        super().__init__(data, batch_size, num_steps, sample_coverage,
+                         save_dir, log, **kwargs)
+        self.variant_idx=data.x[2]
+    def _sample_nodes(self, batch_size):
+        start=torch.tensor(self.variant_idx,dtype=torch.long).reshape((batch_size,))
+        # start = torch.randint(0, self.N, (batch_size, ), dtype=torch.long)
+        node_idx = self.adj.random_walk(start.flatten(), self.walk_length)
+        return node_idx.view(-1)
