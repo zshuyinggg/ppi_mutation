@@ -32,7 +32,7 @@ def find_current_path():
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
 from scripts.utils import *
-from torch_geometric.nn import GATConv, GINEConv, GCNConv
+from torch_geometric.nn import GATConv, GINEConv, GCNConv,SAGEConv
 
 class MLP(nn.Module):
     def __init__(self, layer_num, hidden_dim):
@@ -48,36 +48,43 @@ class MLP(nn.Module):
 
 
 class GNN(pl.LightningModule):
-    def __init__(self, gnn_type, node_dim, num_gnn_layers, gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False):
+    def __init__(self, gnn_type, node_dim, num_gnn_layers, gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,**args):
         super().__init__()
         self.sampler=sampler
-        if gnn_type == 'gat': self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=node_dim, out_channels=node_dim//gat_attn_head, heads=gat_attn_head, edge_dim=1)
-                                                                    for _ in range(num_gnn_layers)] )
+        if layers_dims: layers_dims=[node_dim] + layers_dims
+        else: layers_dims=[node_dim]*(num_gnn_layers+1)
+        if gnn_type == 'gat': 
+            self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=layers_dims[i], out_channels=layers_dims[i+1]//gat_attn_head, heads=gat_attn_head)
+                                                                    for i in range(num_gnn_layers)] )
         elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_dim,out_channels=node_dim)
                                                                     for _ in range(num_gnn_layers)] )
         elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(MLP(gin_mlp_layer, node_dim)))
                                                                     for _ in range(num_gnn_layers)] )
+        print(self.gnnconv_list)
+        
         self.relu = nn.ReLU()
         self.node_dim=node_dim
         self.classifier=nn.Sequential(
-            nn.Linear(node_dim*2,node_dim),
-            nn.ReLU(),
-            nn.Linear(node_dim,2),
+            nn.Linear(layers_dims[-1]*2,2),
             nn.Softmax(dim=1)
         )
         self.lr=lr
         self.train_out=[]
         self.val_out=[]
+        self.test_out=[]
         self.ce_loss=nn.CrossEntropyLoss()
         self.auroc=BinaryAUROC()
         self.auprc=AveragePrecision(task='binary')
+        self.save_hyperparameters()
 
     def forward(self, x, edge_index):
         x_sum = x
         for gnnconv in self.gnnconv_list:
-            x = self.relu(x)
+            # x = self.relu(x)
             x = gnnconv(x=x, edge_index=edge_index)
-            x_sum = x_sum + x
+            x = self.relu(x)
+
+            x_sum = x_sum + x 
         x = x_sum / (len(self.gnnconv_list) + 1)
         return x
 
@@ -94,17 +101,21 @@ class GNN(pl.LightningModule):
             # print(labels)
             x=self.forward(node_embs,self.adj)
             x_reshaped=x.view(len(labels),-1, self.node_dim) # (batch_size, num_node, node_dim)
+
             # print(x_reshaped.shape)
             variants_aftergnn=[]
+            print('after gnn')
             for i in range(len(labels)):
+                print('for item %s, mean = %s, var =%s'%(i,x_reshaped[i,variant_indices[i],:].view(1,-1).mean(),x_reshaped[i,variant_indices[i],:].view(1,-1).var()))
                 variants_aftergnn.append(x_reshaped[i,variant_indices[i],:].view(1,-1))
             variants_aftergnn=torch.vstack(variants_aftergnn)
             variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
+            print('original variant')
+            print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
             x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
             y=self.classifier(x2classify)
             loss=self.ce_loss(y,labels)
             self.train_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
-            print(torch.cuda.max_memory_reserved()/ 1024 ** 3 )
             return loss
 
     def configure_optimizers(self,lr = None) :
@@ -123,6 +134,8 @@ class GNN(pl.LightningModule):
         if self.trainer.global_rank==0:
             print('\n------gathered auroc is %s----\n'%train_auroc_gather,flush=True)
             print('\n------gathered auprc is %s----\n'%train_auprc_gather,flush=True)
+            print(torch.cuda.max_memory_reserved()/ 1024 ** 3 )
+
         del all_preds, train_auroc_gather, train_auprc_gather,train_loss
         self.train_out.clear()
 
@@ -135,8 +148,12 @@ class GNN(pl.LightningModule):
         x=self.forward(node_embs,edge_index)
         x_reshaped=x.view(len(labels),-1, self.node_dim)
         variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
+        print('after gnn variant')
+        print(variants_aftergnn.mean(dim=1),variants_aftergnn.var(dim=1))
         variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
         x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
+        print('original variant')
+        print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
         y=self.classifier(x2classify)
         loss=self.ce_loss(y,labels)
         self.val_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
@@ -157,3 +174,39 @@ class GNN(pl.LightningModule):
             print('\n------gathered auprc is %s----\n'%val_auprc_gather,flush=True)
         del all_preds, val_auroc_gather, val_auprc_gather,val_loss
         self.val_out.clear()
+
+
+
+    def test_step(self, batch,batch_idx):
+        node_embs,variant_embs,variant_idx=batch.x[0],batch.x[1],batch.x[2]
+        edge_index=batch.edge_index[:batch.num_nodes,:batch.num_nodes]
+        labels=batch.y[0]
+        x=self.forward(node_embs,edge_index)
+        x_reshaped=x.view(len(labels),-1, self.node_dim)
+        variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
+        print('after gnn variant')
+        print(variants_aftergnn.mean(dim=1),variants_aftergnn.var(dim=1))
+        variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
+        print('original variant')
+        print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
+        x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
+        y=self.classifier(x2classify)
+        loss=self.ce_loss(y,labels)
+        self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+        return loss
+
+
+    def on_test_epoch_end(self) :
+        all_preds=torch.vstack(self.test_out)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
+        test_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        test_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        test_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('test_loss',test_loss,sync_dist=True)
+        self.log('test_auroc_gathered',test_auroc_gather)
+        self.log('test_auprc_gathered',test_auprc_gather)
+        if self.trainer.global_rank==0:
+            print('\n------gathered auroc is %s----\n'%test_auroc_gather,flush=True)
+            print('\n------gathered auprc is %s----\n'%test_auprc_gather,flush=True)
+        del all_preds, test_auroc_gather, test_auprc_gather,test_loss
+        self.test_out.clear()

@@ -249,9 +249,16 @@ class ProteinDataModule(pl.LightningDataModule):
                                             shuffle=False, num_workers=8,drop_last=True)
                 self.train_batch_num=len(train_set)//(num_devices*num_nodes*bs_short)
                 self.val_batch_num=len(val_set)//(num_devices*num_nodes*bs_short)
+                train_name_list=train_set.dataset.all_sequences.iloc[train_set.indices]['Name'].tolist()
+                val_name_list=val_set.dataset.all_sequences.iloc[val_set.indices]['Name'].tolist()
+                with open(pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_train_name_list_%s'%self.seed),'w') as f:
+                    f.writelines(str(train_name_list))
+                with open(pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_val_name_list_%s'%self.seed),'w') as f:
+                    f.writelines(str(val_name_list))
             
             else:
                 train_set,val_set= split_train_val(self.dataset,train_val_ratio,random_seed=self.seed)
+                
                 print('Splitting training set by length\n=======================')
                 train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
                 train_short_len,train_medium_len,train_long_len=len(train_short_set),len(train_medium_set),len(train_long_set),

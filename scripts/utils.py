@@ -1,5 +1,4 @@
 import configparser
-#%%
 import csv
 import xlrd
 import pandas as pd

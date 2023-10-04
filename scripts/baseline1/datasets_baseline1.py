@@ -1,4 +1,5 @@
 
+from lightning.pytorch.utilities.types import EVAL_DATALOADERS
 import torch
 from torch_geometric.data import Data
 global top_path,script_path, data_path, logging_path
@@ -21,17 +22,31 @@ top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find
 sys.path.append(top_path)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class VariantPPI(Dataset):
-    def __init__(self, root, clinvar_csv, variant_embedding_path, wild_embedding_path, transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, root, clinvar_csv, variant_embedding_path, wild_embedding_path, transform=None, pre_transform=None,variant_list_name='2019_variant_name_list', pre_filter=None, **args):
         self.clinvar_csv=pd.read_csv(clinvar_csv)
+        print(clinvar_csv, variant_embedding_path, wild_embedding_path,variant_list_name)
         self.variant_embeddings=torch.load(variant_embedding_path)
         self.wild_embedding_path=wild_embedding_path
         self.wild_embeddings=torch.load(self.wild_embedding_path)
         super().__init__(root, transform, pre_transform, pre_filter)
         self.dic_index2wild_embeddings=self.get_all_indexed_wild_embeddings()
         self.get_edge_index()
-        with open(pj(self.processed_dir,'variant_name_list.txt'),'r') as f:
-            self.variant_name_list=eval(f.readline())
+        self.variant_name_list=read_variant_name_list_screen(variant_embedding_path,variant_list_name,self.dic_uniprot2idx)
         self.num_nodes=len(self.dic_index2wild_embeddings)
 
     @property
@@ -39,23 +54,25 @@ class VariantPPI(Dataset):
         return os.listdir(self.processed_dir)
 
 
-    def process(self):
-        # read variant
-        self.wild_embeddings=torch.load(self.wild_embedding_path)
-        dic_index2wild_embeddings=self.get_all_indexed_wild_embeddings()
-        num_nodes=len(dic_index2wild_embeddings)
-        self.get_edge_index()
-        self.variant_name_list=self.clinvar_csv['Name'].tolist()
-        for name in self.variant_name_list:
-            try:
-                uniprot=self.variant_embeddings[name]['UniProt']  #check if the variant embedding was not skipped due to drop_last=True
-                idx=self.dic_uniprot2idx[uniprot]
-            except KeyError:
-                self.variant_name_list.remove(name)
+    # def process(self,variant_only=False):
+    #     # read variant
+    #     if not variant_only:
+    #         self.wild_embeddings=torch.load(self.wild_embedding_path)
+    #         dic_index2wild_embeddings=self.get_all_indexed_wild_embeddings()
+    #         num_nodes=len(dic_index2wild_embeddings)
+    #         self.get_edge_index()
+    #     print('processing')
+    #     self.variant_name_list=self.clinvar_csv['Name'].tolist()
+    #     for name in self.variant_name_list:
+    #         try:
+    #             uniprot=self.variant_embeddings[name]['UniProt']  #check if the variant embedding was not skipped due to drop_last=True
+    #             idx=self.dic_uniprot2idx[uniprot]
+    #         except KeyError:
+    #             self.variant_name_list.remove(name)
 
-        with open(pj(self.processed_dir,'variant_name_list.txt'),'w') as f:
-            f.writelines(str(self.variant_name_list))
-            print('Processed variant name list')
+    #     with open(pj(self.processed_dir,'%s.txt'%self.variant_list_name),'w') as f:
+    #         f.writelines(str(self.variant_name_list))
+    #         print('Processed variant name list')
 
         
     def len(self):
@@ -64,13 +81,22 @@ class VariantPPI(Dataset):
     def get(self, idx):
         name=self.variant_name_list[idx]
 
-        variant_embeddings,variant_uniprot,variant_label=self.variant_embeddings[name]['embs'],self.variant_embeddings[name]['UniProt'],self.variant_embeddings[name]['label']
+        try:variant_embeddings,variant_uniprot,variant_label=self.variant_embeddings[name]['embs'],self.variant_embeddings[name]['UniProt'],self.variant_embeddings[name]['label']
+        except:
+            print(name,flush=True)
+        
         index_variant=self.dic_uniprot2idx[variant_uniprot]
         ppi_with_variant_embeddings=torch.vstack([self.dic_index2wild_embeddings[i] if i!=index_variant else variant_embeddings for i in range(len(self.dic_index2wild_embeddings))])
         data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.edge_index,y=[variant_label],num_nodes=self.num_nodes)
         # data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.adj,y=[variant_label],num_nodes=self.num_nodes)
         return data
 
+    def get_stat(self):
+        l=[]
+        for idx in range(self.__len__()):
+            label=self.variant_embeddings[self.variant_name_list[idx]]['label']
+            l.append(label)
+        print('overall data num=%s, positive samples= %s'%(len(l),sum(l)))
     def get_all_indexed_wild_embeddings(self):
         uniprots,dic_uniprot2idx,dic_idx2uniprot=all_uniprot()
         self.dic_uniprot2idx,self.dic_idx2uniprot=dic_uniprot2idx,dic_idx2uniprot
@@ -108,23 +134,56 @@ def split_train_val(dataset,train_val_split=0.8,random_seed=52):
 
 
 class VariantPPIModule(pl.LightningDataModule):
-    def __init__(self,root, clinvar_csv, variant_embedding_path, wild_embedding_path,batch_size,num_workers,random_seed,train_val_ratio=0.8) :
+    def __init__(self,root, train_clinvar_csv, variant_embedding_path, wild_embedding_path,batch_size,num_workers,random_seed,train_val_ratio=0.8,test_clinvar_csv=None,test_variant_embedding_path=None,**args) :
         super().__init__()
-        self.dataset=VariantPPI(root, clinvar_csv, variant_embedding_path, wild_embedding_path)
+        self.train_set=VariantPPI(root, train_clinvar_csv, variant_embedding_path, wild_embedding_path,variant_list_name='2019_train_name_list_1050')
+        self.val_set=VariantPPI(root, train_clinvar_csv, variant_embedding_path, wild_embedding_path,variant_list_name='2019_val_name_list_1050')
+        
         self.batch_size=batch_size
         self.num_workers=num_workers
         self.random_seed=random_seed
-        self.trainset,self.valset=split_train_val(self.dataset,train_val_split=train_val_ratio,random_seed=random_seed)
+        # self.trainset,self.valset=split_train_val(self.dataset,train_val_split=train_val_ratio,random_seed=random_seed)
+        self.test_set=VariantPPI(root, test_clinvar_csv, test_variant_embedding_path, wild_embedding_path,variant_list_name='2019_test_name_list_1050')
+    
+        self.train_set.get_stat()
+        self.val_set.get_stat()
+        self.test_set.get_stat()
     def train_dataloader(self) :
-        return DataLoader(self.trainset,shuffle=True,batch_size=self.batch_size,num_workers=self.num_workers)
+        return DataLoader(self.train_set,shuffle=True,batch_size=self.batch_size,num_workers=self.num_workers)
     
     def val_dataloader(self) :
-        return DataLoader(self.valset,shuffle=False,batch_size=self.batch_size,num_workers=self.num_workers)
+        return DataLoader(self.val_set,shuffle=False,batch_size=2*self.batch_size,num_workers=self.num_workers)
     
-
+    def test_dataloader(self) :
+        return DataLoader(self.test_set,shuffle=False,batch_size=2*self.batch_size,num_workers=self.num_workers)
 
 class VariantRandomWalkLoader(NodeLoader):
     def __init__(data, node_sampler, input_nodes,filter_per_worker=True):
+        
+        
+        if node_sampler is None:
+            neighbor_sampler = VariantRandomWalkSampler(
+                data,
+                num_neighbors=num_neighbors,
+                replace=replace,
+                directed=directed,
+                disjoint=disjoint,
+                temporal_strategy=temporal_strategy,
+                time_attr=time_attr,
+                is_sorted=is_sorted,
+                share_memory=kwargs.get('num_workers', 0) > 0,
+            )
+        super().__init__(
+            data=data,
+            node_sampler=neighbor_sampler,
+            input_nodes=input_nodes,
+            input_time=input_time,
+            transform=transform,
+            transform_sampler_output=transform_sampler_output,
+            filter_per_worker=filter_per_worker,
+            **kwargs,
+        )
+
         
         pass
 
@@ -144,3 +203,42 @@ class VariantRandomWalkSampler(GraphSAINTRandomWalkSampler):
         # start = torch.randint(0, self.N, (batch_size, ), dtype=torch.long)
         node_idx = self.adj.random_walk(start.flatten(), self.walk_length)
         return node_idx.view(-1)
+    
+
+def read_variant_name_list_screen(emb_path,variant_list_name,uniprotdic):
+    embs=torch.load(emb_path)
+    pth=pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed','%s.txt'%variant_list_name)
+    with open(pth,'r') as f:
+        variant_name_list=eval(f.readline())
+    # for name in variant_name_list:
+    #     if embs.get(name):
+    #         if (embs[name].get('embs') is not None and embs[name].get('UniProt')):pass
+    #         else:
+    #             variant_name_list.remove(name) 
+    #             print('removing %s'%name)
+    #     else:
+    #         variant_name_list.remove(name) 
+    #         print('removing %s'%name)
+    # with open(pth,'w') as f:
+    #     f.writelines(str(variant_name_list))
+    # print('%s saved'%pth)
+    return variant_name_list
+
+
+def variant_list_from_embs(emb_path,variant_list_name):
+    embs=torch.load(emb_path)
+    pth=pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed','%s.txt'%variant_list_name)
+    variant_name_list=[]
+    for name in embs:
+        if (embs[name].get('embs') is not None and embs[name].get('UniProt')):variant_name_list.append(name)
+        else:
+            pass
+    with open(pth,'w') as f:
+        f.writelines(str(variant_name_list))
+    print('%s saved'%pth)
+    return variant_name_list
+
+
+
+# variant_list_from_embs('/scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt','2019_test_variant_name_list')
+

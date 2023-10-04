@@ -1,19 +1,20 @@
 data_init:
     root: /scratch/user/zshuying/ppi_mutation/data/baseline1
     train_clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_1_no_error.csv
-    test_clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv
     variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_variant_embds.pt
-    test_variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt
     wild_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/all_wild_embeddings.pt
-    batch_size: 4
+    batch_size: 3
     num_workers: 15
     random_seed: 1050
     train_val_ratio: 0.8
+    test_clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv
+    test_variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt
+    variant_list_name: 2019_variant_name_list
 
 gnn_init:
     gnn_type: gcn
     node_dim: 5760
-    num_gnn_layers: 4
+    num_gnn_layers: 7
     lr: 0.0001
 
 num_nodes: 5
