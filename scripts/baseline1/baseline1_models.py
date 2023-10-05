@@ -48,7 +48,7 @@ class MLP(nn.Module):
 
 
 class GNN(pl.LightningModule):
-    def __init__(self, gnn_type, node_dim, num_gnn_layers, gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,**args):
+    def __init__(self, gnn_type, node_dim, num_gnn_layers, gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,**args):
         super().__init__()
         self.sampler=sampler
         if layers_dims: layers_dims=[node_dim] + layers_dims
@@ -68,6 +68,8 @@ class GNN(pl.LightningModule):
             nn.Linear(layers_dims[-1]*2,2),
             nn.Softmax(dim=1)
         )
+        if layer_norm:self.layernorm=nn.LayerNorm(node_dim)
+        else: self.layernorm=False
         self.lr=lr
         self.train_out=[]
         self.val_out=[]
@@ -104,14 +106,21 @@ class GNN(pl.LightningModule):
 
             # print(x_reshaped.shape)
             variants_aftergnn=[]
-            print('after gnn')
+            # print('after gnn')
             for i in range(len(labels)):
-                print('for item %s, mean = %s, var =%s'%(i,x_reshaped[i,variant_indices[i],:].view(1,-1).mean(),x_reshaped[i,variant_indices[i],:].view(1,-1).var()))
-                variants_aftergnn.append(x_reshaped[i,variant_indices[i],:].view(1,-1))
+                if self.layernorm is not False:
+                    variants_aftergnn.append(self.layernorm(x_reshaped[i,variant_indices[i],:].view(1,-1)))
+                else:
+                    variants_aftergnn.append(x_reshaped[i,variant_indices[i],:].view(1,-1))
+
+                # print('for item %s, mean = %s, var =%s'%(i,x_reshaped[i,variant_indices[i],:].view(1,-1).mean(),x_reshaped[i,variant_indices[i],:].view(1,-1).var()))
             variants_aftergnn=torch.vstack(variants_aftergnn)
             variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
-            print('original variant')
-            print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
+
+            if self.layernorm is not False:
+                variants_beforegnn=self.layernorm(variants_beforegnn)
+            # print('original variant')
+            # print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
             x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
             y=self.classifier(x2classify)
             loss=self.ce_loss(y,labels)
@@ -148,12 +157,16 @@ class GNN(pl.LightningModule):
         x=self.forward(node_embs,edge_index)
         x_reshaped=x.view(len(labels),-1, self.node_dim)
         variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
-        print('after gnn variant')
-        print(variants_aftergnn.mean(dim=1),variants_aftergnn.var(dim=1))
+        if self.layernorm is not False:variants_aftergnn=self.layernorm(variants_aftergnn)
+        # print('after gnn variant')
+        # print(variants_aftergnn.mean(dim=1),variants_aftergnn.var(dim=1))
         variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
+
+        if self.layernorm is not False:
+            variants_beforegnn=self.layernorm(variants_beforegnn)
         x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
-        print('original variant')
-        print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
+        # print('original variant')
+        # print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
         y=self.classifier(x2classify)
         loss=self.ce_loss(y,labels)
         self.val_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
@@ -184,9 +197,12 @@ class GNN(pl.LightningModule):
         x=self.forward(node_embs,edge_index)
         x_reshaped=x.view(len(labels),-1, self.node_dim)
         variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
+        if self.layernorm is not False:variants_aftergnn=self.layernorm(variants_aftergnn)
         print('after gnn variant')
         print(variants_aftergnn.mean(dim=1),variants_aftergnn.var(dim=1))
         variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
+        if self.layernorm is not False:
+            variants_beforegnn=self.layernorm(variants_beforegnn)
         print('original variant')
         print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
         x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])

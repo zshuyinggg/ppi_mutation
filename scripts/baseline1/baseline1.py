@@ -29,7 +29,7 @@ import argparse
 
 pj=os.path.join
 parser = argparse.ArgumentParser()
-parser.add_argument('--config_file', type=str, help='',default="gcn3_test.yaml")
+parser.add_argument('--config_file', type=str, help='',default="gat4_test.yaml")
 args = parser.parse_args()
 
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     trainer.datamodule=variantPPI
 
     if not config.get('test'):trainer.fit(gcn,datamodule=variantPPI) 
-    # else:trainer.test(gcn,datamodule=variantPPI,ckpt_path=config['ckpt'])
-    else:trainer.validate(gcn,datamodule=variantPPI,ckpt_path=config['ckpt'])
+    else:trainer.test(gcn,datamodule=variantPPI,ckpt_path=config['ckpt'])
+    # else:trainer.validate(gcn,datamodule=variantPPI,ckpt_path=config['ckpt'])
     #%%
 # %%
