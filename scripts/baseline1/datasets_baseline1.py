@@ -37,9 +37,7 @@ sys.path.append(top_path)
 
 
 class VariantPPI(Dataset):
-    def __init__(self, root, clinvar_csv, variant_embedding_path, wild_embedding_path, transform=None, pre_transform=None,variant_list_name='2019_variant_name_list', pre_filter=None, **args):
-        self.clinvar_csv=pd.read_csv(clinvar_csv)
-        print(clinvar_csv, variant_embedding_path, wild_embedding_path,variant_list_name)
+    def __init__(self, root, variant_embedding_path, wild_embedding_path, transform=None, pre_transform=None,variant_list_name='2019_variant_name_list', pre_filter=None, **args):
         self.variant_embeddings=torch.load(variant_embedding_path)
         self.wild_embedding_path=wild_embedding_path
         self.wild_embeddings=torch.load(self.wild_embedding_path)
@@ -134,17 +132,21 @@ def split_train_val(dataset,train_val_split=0.8,random_seed=52):
 
 
 class VariantPPIModule(pl.LightningDataModule):
-    def __init__(self,root, train_clinvar_csv, variant_embedding_path, wild_embedding_path,batch_size,num_workers,random_seed,train_val_ratio=0.8,test_clinvar_csv=None,test_variant_embedding_path=None,**args) :
+    def __init__(self,root, train_val_variant_embedding_path, wild_embedding_path,batch_size,num_workers,\
+                 random_seed,test_variant_embedding_path=None,\
+                    train_list_name='2019_train_name_list_1050',\
+                        val_list_name='2019_val_name_list_1050',\
+                            test_list_name='2019_test_name_list_1050',\
+                                **args) :
         super().__init__()
-        self.train_set=VariantPPI(root, train_clinvar_csv, variant_embedding_path, wild_embedding_path,variant_list_name='2019_train_name_list_1050')
-        self.val_set=VariantPPI(root, train_clinvar_csv, variant_embedding_path, wild_embedding_path,variant_list_name='2019_val_name_list_1050')
+        self.train_set=VariantPPI(root, train_val_variant_embedding_path, wild_embedding_path,variant_list_name=train_list_name)
+        self.val_set=VariantPPI(root, train_val_variant_embedding_path, wild_embedding_path,variant_list_name=val_list_name)
         
         self.batch_size=batch_size
         self.num_workers=num_workers
         self.random_seed=random_seed
         # self.trainset,self.valset=split_train_val(self.dataset,train_val_split=train_val_ratio,random_seed=random_seed)
-        self.test_set=VariantPPI(root, test_clinvar_csv, test_variant_embedding_path, wild_embedding_path,variant_list_name='2019_test_name_list_1050')
-    
+        self.test_set=VariantPPI(root, test_variant_embedding_path, wild_embedding_path,variant_list_name=test_list_name)
         self.train_set.get_stat()
         self.val_set.get_stat()
         self.test_set.get_stat()
@@ -239,6 +241,32 @@ def variant_list_from_embs(emb_path,variant_list_name):
     return variant_name_list
 
 
+def set_variant_name_list_ratio(variant_list_name,variant_embedding_path,ratio,save_name):
+    #ratio is the pos:neg ratio
+    pth=pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed','%s.txt'%variant_list_name)
+    with open(pth,'r') as f:
+        variant_name_list=eval(f.readline())
+    embs=torch.load(variant_embedding_path)
+    names=[]
+    labels=[]
+    for emb in embs:
+        names,labels.append(emb['Name'],emb['label'])
+    pos_neg_ratio_ori=sum(labels)/(len(labels)-sum(labels))
+    if pos_neg_ratio_ori>ratio:
+        neg=len(labels)-sum(labels)
+        pos=int(neg * ratio)
+    else:
+        pos=sum(labels)
+        neg=pos//ratio
 
+    df=pd.DataFrame([names,labels],columns=['Name','Label'])
+    pos_names=df[df[labels==1]].sample(n=pos)['Name'].tolist()
+    neg_names=df[df[labels==0]].sample(n=neg)['Name'].tolist()
+    print('positive samples: %d, negative samples: %d'%(len(pos_names),len(neg_names)))
+    with open(pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed','%s.txt'%save_name),'w') as f:
+        f.writelines(str(pos_names+neg_names))
+    
 # variant_list_from_embs('/scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt','2019_test_variant_name_list')
 
+
+set_variant_name_list_ratio('2019_test_name_list_1050','/scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt',1.8,'2019_test_1.8_variant_name_list')
