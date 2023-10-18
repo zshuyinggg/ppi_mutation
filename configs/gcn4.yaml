@@ -21,5 +21,3 @@ gnn_init:
 
 num_nodes: 5
 num_devices: 2
-ckpt: 
-test: True

@@ -11,12 +11,13 @@ from torch_geometric.data import Dataset
 import pandas as pd
 from torch_geometric.loader import GraphSAINTRandomWalkSampler
 from torch_sparse import SparseTensor
+from lightning.pytorch import seed_everything
 
 def find_current_path():
     if getattr(sys, 'frozen', False):current = sys.executable
     else:current = __file__
     return current
-
+seed_everything(1050, workers=True)
 pj=os.path.join
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
@@ -249,8 +250,9 @@ def set_variant_name_list_ratio(variant_list_name,variant_embedding_path,ratio,s
     embs=torch.load(variant_embedding_path)
     names=[]
     labels=[]
-    for emb in embs:
-        names,labels.append(emb['Name'],emb['label'])
+    for name in embs:
+        names.append(name)
+        labels.append(embs[name]['label'])
     pos_neg_ratio_ori=sum(labels)/(len(labels)-sum(labels))
     if pos_neg_ratio_ori>ratio:
         neg=len(labels)-sum(labels)
@@ -259,9 +261,9 @@ def set_variant_name_list_ratio(variant_list_name,variant_embedding_path,ratio,s
         pos=sum(labels)
         neg=pos//ratio
 
-    df=pd.DataFrame([names,labels],columns=['Name','Label'])
-    pos_names=df[df[labels==1]].sample(n=pos)['Name'].tolist()
-    neg_names=df[df[labels==0]].sample(n=neg)['Name'].tolist()
+    df=pd.DataFrame(list(zip(names,labels)),columns=['Name','Label'])
+    pos_names=df[df['Label']==1].sample(n=int(pos))['Name'].tolist()
+    neg_names=df[df['Label']==0].sample(n=int(neg))['Name'].tolist()
     print('positive samples: %d, negative samples: %d'%(len(pos_names),len(neg_names)))
     with open(pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed','%s.txt'%save_name),'w') as f:
         f.writelines(str(pos_names+neg_names))

@@ -9,7 +9,7 @@ data_init:
     train_val_ratio: 0.8
     test_clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv
     test_variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt
-    variant_list_name: 2019_variant_name_list
+    test_list_name: 2019_test_1.8_variant_name_list
 
 gnn_init:
     gnn_type: gcn
@@ -18,8 +18,12 @@ gnn_init:
     lr: 0.0001
     layer_norm: True
 
+eval_init:
+    input_dim: 5760
+    hidden_dims: []
+    out_dim: 2
 
 num_nodes: 2
 num_devices: 2
-test: True
 ckpt: /scratch/user/zshuying/ppi_mutation/logs/baseline1/gcn4.yaml_seed1050_-epoch=09-val_loss=0.42.ckpt
+
