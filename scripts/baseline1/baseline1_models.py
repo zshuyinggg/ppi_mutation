@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 import numpy as np
 import torch
@@ -47,197 +47,9 @@ class MLP(nn.Module):
         return x
 
 
-class GNN(pl.LightningModule):
-    def __init__(self, gnn_type, node_dim, num_gnn_layers, gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,**args):
-        super().__init__()
-        self.sampler=sampler
-        if layers_dims: layers_dims=[node_dim] + layers_dims
-        else: layers_dims=[node_dim]*(num_gnn_layers+1)
-        if gnn_type == 'gat': 
-            self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=layers_dims[i], out_channels=layers_dims[i+1]//gat_attn_head, heads=gat_attn_head)
-                                                                    for i in range(num_gnn_layers)] )
-        elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_dim,out_channels=node_dim)
-                                                                    for _ in range(num_gnn_layers)] )
-        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(MLP(gin_mlp_layer, node_dim)))
-                                                                    for _ in range(num_gnn_layers)] )
-        print(self.gnnconv_list)
-        
-        self.relu = nn.ReLU()
-        self.node_dim=node_dim
-        self.classifier=nn.Sequential(
-            nn.Linear(layers_dims[-1]*2,2),
-            nn.Softmax(dim=1)
-        )
-        if layer_norm:self.layernorm=nn.LayerNorm(node_dim)
-        else: self.layernorm=False
-        self.lr=lr
-        self.train_out=[]
-        self.val_out=[]
-        self.test_out=[]
-        self.ce_loss=nn.CrossEntropyLoss()
-        self.auroc=BinaryAUROC()
-        self.auprc=AveragePrecision(task='binary')
-        self.save_hyperparameters()
-
-    def forward(self, x, edge_index):
-        x_sum = x
-        for gnnconv in self.gnnconv_list:
-            # x = self.relu(x)
-            x = gnnconv(x=x, edge_index=edge_index)
-            x = self.relu(x)
-
-            x_sum = x_sum + x 
-        x = x_sum / (len(self.gnnconv_list) + 1)
-        return x
-
-    def training_step(self, batch, batch_idx):
-        if self.sampler:
-            #get subgraph:
-            random_walk_sampler=VariantRandomWalkSampler(batch,batch_size=4,walk_length=10)
-            for subgraph in random_walk_sampler:
-                pass
-        else:
-            node_embs,variant_embs,variant_indices=batch.x[0],batch.x[1],batch.x[2]
-            self.adj = SparseTensor.from_edge_index(batch.edge_index)
-            labels=batch.y[0]
-            # print(labels)
-            x=self.forward(node_embs,self.adj)
-            x_reshaped=x.view(len(labels),-1, self.node_dim) # (batch_size, num_node, node_dim)
-
-            # print(x_reshaped.shape)
-            variants_aftergnn=[]
-            # print('after gnn')
-            for i in range(len(labels)):
-                if self.layernorm is not False:
-                    variants_aftergnn.append(self.layernorm(x_reshaped[i,variant_indices[i],:].view(1,-1)))
-                else:
-                    variants_aftergnn.append(x_reshaped[i,variant_indices[i],:].view(1,-1))
-
-                # print('for item %s, mean = %s, var =%s'%(i,x_reshaped[i,variant_indices[i],:].view(1,-1).mean(),x_reshaped[i,variant_indices[i],:].view(1,-1).var()))
-            variants_aftergnn=torch.vstack(variants_aftergnn)
-            variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
-
-            if self.layernorm is not False:
-                variants_beforegnn=self.layernorm(variants_beforegnn)
-            # print('original variant')
-            # print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
-            x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
-            y=self.classifier(x2classify)
-            loss=self.ce_loss(y,labels)
-            self.train_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
-            return loss
-
-    def configure_optimizers(self,lr = None) :
-        optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
-        return optimizer
-    
-    def on_train_epoch_end(self) :
-        all_preds=torch.vstack(self.train_out)
-        all_preds_gather=self.all_gather(all_preds).view(-1,3)
-        train_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
-        train_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
-        train_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('train_loss',train_loss,sync_dist=True)
-        self.log('train_auroc_gathered',train_auroc_gather)
-        self.log('train_auprc_gathered',train_auprc_gather)
-        if self.trainer.global_rank==0:
-            print('\n------gathered auroc is %s----\n'%train_auroc_gather,flush=True)
-            print('\n------gathered auprc is %s----\n'%train_auprc_gather,flush=True)
-            print(torch.cuda.max_memory_reserved()/ 1024 ** 3 )
-
-        del all_preds, train_auroc_gather, train_auprc_gather,train_loss
-        self.train_out.clear()
-
-
-    def validation_step(self, batch,batch_idx):
-        node_embs,variant_embs,variant_idx=batch.x[0],batch.x[1],batch.x[2]
-        edge_index=batch.edge_index[:batch.num_nodes,:batch.num_nodes]
-        labels=batch.y[0]
-        x=self.forward(node_embs,edge_index)
-        x_reshaped=x.view(len(labels),-1, self.node_dim)
-        variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
-        if self.layernorm is not False:variants_aftergnn=self.layernorm(variants_aftergnn)
-        # print('after gnn variant')
-        # print(variants_aftergnn.mean(dim=1),variants_aftergnn.var(dim=1))
-        variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
-
-        if self.layernorm is not False:
-            variants_beforegnn=self.layernorm(variants_beforegnn)
-        x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
-        # print('original variant')
-        # print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
-        y=self.classifier(x2classify)
-        loss=self.ce_loss(y,labels)
-        self.val_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
-        return loss
-
-    def get_gnn_embs(self,batch):
-        node_embs,variant_embs,variant_idx=batch.x[0],batch.x[1],batch.x[2]
-        edge_index=batch.edge_index[:batch.num_nodes,:batch.num_nodes]
-        labels=batch.y[0]
-        x=self.forward(node_embs,edge_index)
-        x_reshaped=x.view(len(labels),-1, self.node_dim)
-        variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
-        if self.layernorm is not False:variants_aftergnn=self.layernorm(variants_aftergnn)
-        return variants_aftergnn,labels
-    
-    def on_validation_epoch_end(self) :
-        all_preds=torch.vstack(self.val_out)
-        all_preds_gather=self.all_gather(all_preds).view(-1,3)
-        val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
-        val_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
-        val_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('val_loss',val_loss,sync_dist=True)
-        self.log('val_auroc_gathered',val_auroc_gather)
-        self.log('val_auprc_gathered',val_auprc_gather)
-        if self.trainer.global_rank==0:
-            print('\n------gathered auroc is %s----\n'%val_auroc_gather,flush=True)
-            print('\n------gathered auprc is %s----\n'%val_auprc_gather,flush=True)
-        del all_preds, val_auroc_gather, val_auprc_gather,val_loss
-        self.val_out.clear()
-
-
-
-    def test_step(self, batch,batch_idx):
-        node_embs,variant_embs,variant_idx=batch.x[0],batch.x[1],batch.x[2]
-        edge_index=batch.edge_index[:batch.num_nodes,:batch.num_nodes]
-        labels=batch.y[0]
-        x=self.forward(node_embs,edge_index)
-        x_reshaped=x.view(len(labels),-1, self.node_dim)
-        variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
-        if self.layernorm is not False:variants_aftergnn=self.layernorm(variants_aftergnn)
-        print('after gnn variant')
-        print(variants_aftergnn.mean(dim=1),variants_aftergnn.var(dim=1))
-        variants_beforegnn=variant_embs.view(len(labels),self.node_dim)
-        if self.layernorm is not False:
-            variants_beforegnn=self.layernorm(variants_beforegnn)
-        print('original variant')
-        print(variants_beforegnn.mean(dim=1),variants_beforegnn.var(dim=1))
-        x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
-        y=self.classifier(x2classify)
-        loss=self.ce_loss(y,labels)
-        self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
-        return loss
-
-
-    def on_test_epoch_end(self) :
-        all_preds=torch.vstack(self.test_out)
-        all_preds_gather=self.all_gather(all_preds).view(-1,3)
-        test_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
-        test_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
-        test_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
-        self.log('test_loss',test_loss,sync_dist=True)
-        self.log('test_auroc_gathered',test_auroc_gather)
-        self.log('test_auprc_gathered',test_auprc_gather)
-        if self.trainer.global_rank==0:
-            print('\n------gathered auroc is %s----\n'%test_auroc_gather,flush=True)
-            print('\n------gathered auprc is %s----\n'%test_auprc_gather,flush=True)
-        del all_preds, test_auroc_gather, test_auprc_gather,test_loss
-        self.test_out.clear()
-
 
 class plClassificationBaseModel(pl.LightningModule):
-    def __init__(self, input_dim,hidden_dims,out_dim,lr=1e-4,*args: Any, **kwargs: Any) -> None:
+    def __init__(self, input_dim,hidden_dims,out_dim,dropout=False,lr=1e-4,*args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         self.input_dim,self.hidden_dims,self.out_dim,self.lr=input_dim,hidden_dims,out_dim,lr
@@ -249,6 +61,9 @@ class plClassificationBaseModel(pl.LightningModule):
         self.train_out,self.val_out,self.test_out=[],[],[]
         self.auroc=BinaryAUROC()
         self.auprc=AveragePrecision(task='binary')
+        if dropout:
+            self.dropout=nn.Dropout(dropout) 
+        else:self.dropout=False
     def on_train_epoch_end(self) :
         all_preds=torch.vstack(self.train_out)
 
@@ -298,6 +113,7 @@ class plClassificationBaseModel(pl.LightningModule):
 
     def classify(self,x):
         for i,layer in enumerate(self.mlp):
+            if self.dropout is not False:x=self.dropout(x)
             if i <len(self.mlp)-1:x=self.relu(layer(x))
             else:y=self.softmax(layer(x))
         return y
@@ -306,6 +122,122 @@ class plClassificationBaseModel(pl.LightningModule):
     def configure_optimizers(self,lr = None) :
         optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
         return optimizer
+
+class GNN(plClassificationBaseModel):
+    def __init__(self, gnn_type, esm_dim, num_gnn_layers,residual_strategy='mean',dim_reduction=False,dropout=0,f_act='relu', gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,**args):
+        if f_act=='relu':f = nn.ReLU()
+        elif f_act=='tanh':f=nn.Tanh()
+        if dim_reduction:
+            node_dim=dim_reduction 
+        else: node_dim=esm_dim
+        if residual_strategy == 'mean': dim2clf,layernorm1_dim=2*node_dim, node_dim
+        elif residual_strategy == 'stack' : dim2clf,layernorm1_dim = (num_gnn_layers+1)*node_dim+esm_dim,node_dim*(num_gnn_layers+1)
+        super().__init__(input_dim=dim2clf,hidden_dims=[],out_dim=2,dropout=dropout)
+        
+        self.dim_reduction,self.esm_dim,self.residual_strategy,self.f=dim_reduction,esm_dim,residual_strategy,f
+        if dim_reduction:
+            self.variantDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(esm_dim,esm_dim//2),f,nn.Dropout(dropout),nn.Linear(esm_dim//2,node_dim))
+            self.wildDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(esm_dim,esm_dim//2),f,nn.Dropout(dropout),nn.Linear(esm_dim//2,node_dim))
+        self.sampler=sampler
+        if layers_dims: layers_dims=[node_dim] + layers_dims
+        else: layers_dims=[node_dim]*(num_gnn_layers+1)
+        if gnn_type == 'gat': 
+            self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=layers_dims[i], out_channels=layers_dims[i+1]//gat_attn_head, heads=gat_attn_head,dropout=dropout)
+                                                                    for i in range(num_gnn_layers)] )
+        elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_dim,out_channels=node_dim)
+                                                                    for _ in range(num_gnn_layers)] )
+        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(MLP(gin_mlp_layer, node_dim)))
+                                                                    for _ in range(num_gnn_layers)] )
+        
+        self.node_dim=node_dim
+
+        if layer_norm:
+            self.layernorm=True
+            self.layernorm1=nn.LayerNorm(layernorm1_dim)
+            self.layernorm2=nn.LayerNorm(esm_dim)
+        else: self.layernorm=False
+
+        self.save_hyperparameters()
+
+
+    def training_step(self, batch, batch_idx):
+        labels=batch.y[0]
+        y=self.forward(batch)
+        loss=self.ce_loss(y,labels)
+        self.train_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+        return loss
+
+    def validation_step(self, batch,batch_idx):
+        labels=batch.y[0]
+        y=self.forward(batch)
+        loss=self.ce_loss(y,labels)
+        self.val_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+        return loss
+
+    def test_step(self, batch,batch_idx):
+        labels=batch.y[0]
+        y=self.forward(batch)
+        loss=self.ce_loss(y,labels)
+        self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+        return loss
+    
+    def input_dim_reduction(self,batch_size,node_embs,variant_indices):
+        node_embs=node_embs.view(batch_size,-1, self.esm_dim)
+        all_embs_transformed=self.wildDimReduction(node_embs)
+        # variant dim reduction
+        for i in range(batch_size):
+            all_embs_transformed[i,variant_indices[i]]=self.variantDimReduction(node_embs[i,variant_indices[i]])
+        return all_embs_transformed.view(-1,self.node_dim)
+
+    def extract_merge_variant_from_layers(self,batch_size,x_reshaped,variant_indices):
+        variants_aftergnn=[]
+        for i in range(batch_size):
+            if self.layernorm is not False:
+                variants_aftergnn.append(self.layernorm1(x_reshaped[i,variant_indices[i],:].view(1,-1)))
+            else:
+                variants_aftergnn.append(x_reshaped[i,variant_indices[i],:].view(1,-1))
+        return variants_aftergnn
+    
+    def get_gnn_embs(self,batch):
+        node_embs,variant_embs,variant_idx=batch.x[0],batch.x[1],batch.x[2]
+        edge_index=batch.edge_index[:batch.num_nodes,:batch.num_nodes]
+        labels=batch.y[0]
+        x=self.gnn(node_embs,edge_index)
+        x_reshaped=x.view(len(labels),-1, self.node_dim)
+        variants_aftergnn=x_reshaped[torch.arange(len(labels)),variant_idx]
+        if self.layernorm is not False:variants_aftergnn=self.layernorm1(variants_aftergnn)
+        return variants_aftergnn,labels
+
+    def gnn(self, x, edge_index):
+        x_stack=[x]
+        x_sum = x
+        for gnnconv in self.gnnconv_list:
+            x = gnnconv(x=x, edge_index=edge_index)
+            x = self.f(x)
+            if self.residual_strategy=='mean':x_sum = x_sum + x 
+            x_stack.append(x)
+        if self.residual_strategy=='mean':x = x_sum / (len(self.gnnconv_list) + 1)
+        elif self.residual_strategy=='stack':
+            x=torch.hstack(x_stack)
+            # print('stacking, x shape: %s'%str(x.shape))
+
+        return x
+
+    def forward(self,batch):
+        node_embs,variant_embs,variant_indices,labels=batch.x[0],batch.x[1],batch.x[2],batch.y[0]
+        self.adj = SparseTensor.from_edge_index(batch.edge_index)
+        num_nodes=node_embs.shape[0]//len(labels)
+        if self.dim_reduction:
+            node_embs=self.input_dim_reduction(len(labels),node_embs,variant_indices)
+        x=self.gnn(node_embs,self.adj)
+        x_reshaped=x.view(len(labels),num_nodes,-1) # (batch_size, num_node, )
+        variants_aftergnn=torch.vstack(self.extract_merge_variant_from_layers(len(labels),x_reshaped,variant_indices))
+        # variants_beforegnn=self.variantDimReduction(variant_embs.view(len(labels),self.esm_dim))
+        variants_beforegnn=variant_embs.view(len(labels),self.esm_dim)
+        if self.layernorm is not False:variants_beforegnn=self.layernorm2(variants_beforegnn)
+        x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
+        y=self.classify(x2classify)
+        return y
 
 class evaluate_graph_context(plClassificationBaseModel):
     def __init__(self, pretrained_gnn, input_dim,hidden_dims,out_dim,**args):
@@ -333,4 +265,46 @@ class evaluate_graph_context(plClassificationBaseModel):
         self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
         return loss
     
+        
+class ESM_pretrained(pl.LightningModule):
+    def __init__(self, esm_model,*args: Any, **kwargs: Any) :
+        super().__init__(*args, **kwargs)
+        self.val_embds={}
+        self.esm_model, alphabet=esm_model
+        self.batch_converter=alphabet.get_batch_converter()
+        self.alphabet=alphabet
+
+    def validation_step(self, batch, *args: Any, **kwargs: Any) -> STEP_OUTPUT | None:
+        uniprots=batch['UniProt']
+        batch_sample=[]
+        seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
+        for i,seq in enumerate(seqs):
+            if len(seq)<1024:
+                batch_sample.append((uniprots[i],seq))
+            else:
+                batch_sample.append((uniprots[i],seq[:1024]))
+        wild_embs=self.get_esm_embedings(batch_sample)
+        for i in range(wild_embs.shape[0]):
+            self.val_embds[uniprots[i]]=wild_embs[i,:].cpu()
+        
+        return super().validation_step(*args, **kwargs)
+
+    def on_validation_epoch_end(self) -> None:
+        torch.save(self.val_embds,'/scratch/user/zshuying/ppi_mutation/data/baseline1/wild_esm_embds_%s.pt'%self.trainer.global_rank)
+
+        return super().on_validation_epoch_end()
+
+    def get_esm_embedings(self,batch_sample):
+        _, _, batch_tokens=self.batch_converter(batch_sample)
+        batch_tokens=batch_tokens.to(self.device)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        results = self.esm_model(batch_tokens, repr_layers=[6], return_contacts=False)
+        token_representations = results["representations"][6]
+        del results
+        sequence_representations=[]
+        for i, tokens_len in enumerate(batch_lens):
+            sequence_representations.append(token_representations[i, 1: tokens_len - 1].mean(0))    
+        sequence_representations=torch.vstack(sequence_representations)
+        del batch_lens,batch_tokens
+        return sequence_representations
         

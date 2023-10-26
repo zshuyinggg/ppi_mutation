@@ -216,7 +216,7 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 
 
 class ProteinDataModule(pl.LightningDataModule):
-    def __init__(self, low=0,medium=0,high=0,veryhigh=0,train_val_ratio=0.9,discard=True,crop_val=False,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,crop_len=False,which_dl=None,clinvar_csv=os.path.join(script_path,'merged_2019_1.csv'),mix_val=False,train_mix=False,random_seed=42,test=False,):
+    def __init__(self, low=0,medium=0,high=0,veryhigh=0,train_val_ratio=0.9,discard=True,crop_val=False,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,crop_len=False,which_dl=None,clinvar_csv=os.path.join(script_path,'merged_2019_1.csv'),mix_val=False,train_mix=False,random_seed=42,test=False,**args):
         super().__init__()
         self.dataset=ProteinSequence(clinvar_csv=clinvar_csv,delta=delta,random_seed=random_seed)
         self.crop_len=crop_len

@@ -271,4 +271,4 @@ def set_variant_name_list_ratio(variant_list_name,variant_embedding_path,ratio,s
 # variant_list_from_embs('/scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt','2019_test_variant_name_list')
 
 
-set_variant_name_list_ratio('2019_test_name_list_1050','/scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt',1.8,'2019_test_1.8_variant_name_list')
+# set_variant_name_list_ratio('2019_test_name_list_1050','/scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt',1.8,'2019_test_1.8_variant_name_list')

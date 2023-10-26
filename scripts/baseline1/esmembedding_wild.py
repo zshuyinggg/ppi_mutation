@@ -40,7 +40,7 @@ from scripts.utils import *
 from scripts.myesm.model import *
 from scripts.myesm.datasets import *
 import pandas as pd
-
+from scripts.baseline1.baseline1_models import ESM_pretrained
 
 parser = argparse.ArgumentParser(
                     prog='ProgramName',
@@ -70,10 +70,7 @@ if __name__ == '__main__':
     seed_everything(args.seed, workers=True)
     bs=20
     proData=AllWildData()
-
-
-    myesm=Esm_multiscale_wildonly(esm_model=eval("esm.pretrained.%s()"%esm_model),esm_model_dim=args.esm_dim,repr_layers=args.esm_layers,unfreeze_n_layers=unfreeze_layers,lr=bs*num_devices*num_nodes*1e-6).load_from_checkpoint(ckpt)
-    myesm.save_embeddings=True
+    myesm=ESM_pretrained(esm_model=esm.pretrained.esm2_t6_8M_UR50D())
     if num_devices>1:
         trainer=pl.Trainer(max_epochs=200, 
                         devices=num_devices, 
@@ -92,7 +89,6 @@ if __name__ == '__main__':
                         plugins=[SLURMEnvironment(auto_requeue=False)])
         
     trainer.datamodule=proData
-    # trainer.datamodule=test_data
     # trainer.test(model=myesm,datamodule=test_data,ckpt_path=ckpt)
-    trainer.validate(model=myesm,datamodule=proData,ckpt_path=ckpt)
+    trainer.validate(model=myesm,datamodule=proData)
 

@@ -225,6 +225,239 @@ class Esm_finetune(pl.LightningModule):
         return sequence_representations
 
 
+class plClassificationBaseModel(pl.LightningModule):
+    def __init__(self, input_dim,hidden_dims,out_dim,dropout=False,lr=1e-4,*args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.input_dim,self.hidden_dims,self.out_dim,self.lr=input_dim,hidden_dims,out_dim,lr
+        l=[input_dim]+list(hidden_dims)+[out_dim]
+        self.mlp=nn.ModuleList([nn.Linear(l[i],l[i+1]) for i in range(len(l)-1)])
+        self.relu=nn.ReLU()
+        self.softmax=nn.Softmax(dim=1)
+        self.ce_loss=nn.CrossEntropyLoss()
+        self.train_out,self.val_out,self.test_out=[],[],[]
+        self.auroc=BinaryAUROC()
+        self.auprc=AveragePrecision(task='binary')
+        if dropout:
+            self.dropout=nn.Dropout(dropout) 
+        else:self.dropout=False
+    def on_train_epoch_end(self) :
+        all_preds=torch.vstack(self.train_out)
+
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
+        train_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        train_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        train_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('train_loss',train_loss,sync_dist=True)
+        self.log('train_auroc_gathered',train_auroc_gather)
+        self.log('train_auprc_gathered',train_auprc_gather)
+        if self.trainer.global_rank==0:
+            print('\n------gathered auroc is %s----\n'%train_auroc_gather,flush=True)
+            print('\n------gathered auprc is %s----\n'%train_auprc_gather,flush=True)
+        del all_preds, train_auroc_gather, train_auprc_gather,train_loss
+        self.train_out.clear()
+
+
+    def on_validation_epoch_end(self) :
+        all_preds=torch.vstack(self.val_out)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
+        val_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        val_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        val_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('val_loss',val_loss,sync_dist=True)
+        self.log('val_auroc_gathered',val_auroc_gather)
+        self.log('val_auprc_gathered',val_auprc_gather)
+        if self.trainer.global_rank==0:
+            print('\n------gathered auroc is %s----\n'%val_auroc_gather,flush=True)
+            print('\n------gathered auprc is %s----\n'%val_auprc_gather,flush=True)
+        del all_preds, val_auroc_gather, val_auprc_gather,val_loss
+        self.val_out.clear()
+
+    def on_test_epoch_end(self) :
+        all_preds=torch.vstack(self.test_out)
+        all_preds_gather=self.all_gather(all_preds).view(-1,3)
+        test_auroc_gather=self.auroc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        test_auprc_gather=self.auprc(all_preds_gather.float()[:,1],all_preds_gather.long()[:,-1])
+        test_loss=self.ce_loss(all_preds[:,:-1],all_preds.long()[:,-1])
+        self.log('test_loss',test_loss,sync_dist=True)
+        self.log('test_auroc_gathered',test_auroc_gather)
+        self.log('test_auprc_gathered',test_auprc_gather)
+        if self.trainer.global_rank==0:
+            print('\n------gathered auroc is %s----\n'%test_auroc_gather,flush=True)
+            print('\n------gathered auprc is %s----\n'%test_auprc_gather,flush=True)
+        del all_preds, test_auroc_gather, test_auprc_gather,test_loss
+        self.test_out.clear()
+
+    def classify(self,x):
+        for i,layer in enumerate(self.mlp):
+            if self.dropout is not False:x=self.dropout(x)
+            if i <len(self.mlp)-1:x=self.relu(layer(x))
+            else:y=self.softmax(layer(x))
+        return y
+
+    def configure_optimizers(self,lr = None) :
+        optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
+        return optimizer
+    
+class Esm_cls_token(plClassificationBaseModel):
+    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),dropout=0.1,in_dim_clf=2560,repr_layers=36,lr=4*1e-3,crop_len=512,**args):
+        super().__init__(input_dim=in_dim_clf,hidden_dims=[],out_dim=2,dropout=dropout,lr=lr)
+        self.save_hyperparameters()
+        if isinstance(esm_model,str):self.esm_model, alphabet=eval(esm_model)
+        else:self.esm_model, alphabet=esm_model
+        self.batch_converter=alphabet.get_batch_converter()
+        self.alphabet,self.repr_layers,self.crop_len=alphabet,repr_layers,crop_len
+        
+    def training_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        starts,labels,_,mutated_batch_samples,_=self.get_cropped_batch_samples(batch,batch_idx)
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
+        y=self.classify(mutated_embs.float().to(self.device))
+        del mutated_embs
+        loss=self.ce_loss(y,labels)
+        self.train_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+        del y,labels
+        return loss
+    def validation_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        starts,labels,_,mutated_batch_samples,_=self.get_cropped_batch_samples(batch,batch_idx)
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
+        y=self.classify(mutated_embs.float().to(self.device))
+        del mutated_embs
+        loss=self.ce_loss(y,labels)
+        self.val_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+        del y,labels
+        return loss
+    def test_step(self, batch, batch_idx):
+        torch.cuda.empty_cache()
+        starts,labels,_,mutated_batch_samples,_=self.get_cropped_batch_samples(batch,batch_idx)
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
+        y=self.classify(mutated_embs.float().to(self.device))
+        del mutated_embs
+        loss=self.ce_loss(y,labels)
+        self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
+        del y,labels
+        return loss
+    def get_pos_of_name(self,name):
+        change=name.split('p.')[1]
+        obj=re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)',change)
+        if obj is None:
+            print('%s did not find match'%name)
+            new_seq='Error!! did not find match'
+            return new_seq
+        ori,pos,aft=obj.group(1),int(obj.group(2)),obj.group(3)
+        return int(pos)
+    def get_cropped_batch_samples(self,batch,batch_idx):
+        labels=batch['label'].long()
+        locs=batch['Loc'].long()
+        seqs,starts,pos=self.crop_batch(batch,batch_idx)
+        batch['seq']=seqs
+        mutated_batch_samples=list(zip(locs,seqs))
+        # wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos) 
+        return starts,labels,locs,mutated_batch_samples
+    def center_crop(self,seq,pos):
+        left_half=self.crop_len//2
+        right_half=self.crop_len-left_half
+        ideal_right=pos+right_half
+        ideal_left=pos-left_half
+
+        actual_right=len(seq)
+        actual_left=0
+        if actual_left>ideal_left:left,right=actual_left,actual_left+self.crop_len
+        else:
+            if actual_right<ideal_right:left,right=actual_right-self.crop_len,actual_right
+            else:left,right=ideal_left,ideal_right
+        seq_after=seq[left:right]
+        return seq_after,left
+    def crop_batch(self,batch):
+        names,seqs=batch['Name'],batch['seq']
+        seqs_after=[]
+        starts=[]
+        positions=[]
+        for i in range(len(batch['Name'])):
+            name=names[i]
+            seq=seqs[i]
+            pos=self.get_pos_of_name(name)-1 #it counts from 1 in biology instead 0 in python
+            if len(seq)>self.crop_len:
+                seq_after,start=self.center_crop(seq,pos)
+            else:
+                seq_after=seq
+                start=None
+            seqs_after.append(seq_after)
+            starts.append(start)
+            positions.append(pos)
+        return seqs_after,starts,positions
+
+        
+    def get_esm_embedings(self,batch_sample):
+        torch.cuda.empty_cache()
+        locs, _, batch_tokens=self.batch_converter(batch_sample)
+        batch_tokens=batch_tokens.to(self.device)
+        batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
+        results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)
+        token_representations = results["representations"][self.repr_layers]
+        del results
+        sequence_representations = []
+        AA_representations=[]
+        for i, tokens_len in enumerate(batch_lens):
+            sequence_representations.append(token_representations[i, 0])    
+            AA_representations.append(token_representations[i,locs[i]+1])
+        del token_representations
+        torch.cuda.empty_cache()
+        sequence_representations=torch.vstack(sequence_representations)
+        AA_representations=torch.vstack(AA_representations)
+        del batch_lens,batch_tokens
+        return torch.hstack([sequence_representations,AA_representations])
+
+class Esm_Transformer(plClassificationBaseModel):
+    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),dropout=0.1,nhead=4,esm_model_dim=2560,repr_layers=36,lr=4*1e-3,crop_len=512):
+        super().__init__()
+        self.save_hyperparameters()
+        self.esm_model_dim=esm_model_dim
+        if isinstance(esm_model,str):self.esm_model, alphabet=eval(esm_model)
+        else:self.esm_model, alphabet=esm_model
+        self.batch_converter=alphabet.get_batch_converter()
+        self.alphabet=alphabet
+        self.transformer=nn.Transformer(d_model=esm_model_dim, nhead=4, num_encoder_layers=2, num_decoder_layers=2, dim_feedforward=esm_model_dim*nhead, activation='tanh',layer_norm_eps=1e-05, batch_first=True, bias=True,dropout=dropout)
+        self.esm_model.freeze()
+    def get_cropped_batch_samples(self,batch,batch_idx):
+        labels=batch['label'].long()
+        locs=batch['Loc'].long()
+        seqs,starts,pos=self.crop_batch(batch,batch_idx)
+        batch['seq']=seqs
+        mutated_batch_samples=list(zip(locs,seqs))
+        wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos) 
+        return starts,labels,locs,mutated_batch_samples,wild_batch_samples
+    
+    def get_wild_batch(self,mutated_batch,starts=None,pos=None):
+        uniprots=mutated_batch['UniProt']
+        mutants=mutated_batch['seq']
+        locs=mutated_batch['Loc']
+        mutant_lens=[len(seq) for seq in mutants]
+        seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
+        batch_sample=[]
+        lens=[]
+        for i,seq in enumerate(seqs):
+            if starts[i]==0: #no random cropping
+                # print('this seq is not cropped as the length is %s, starts[i] is %s'%(len(seq),starts[i]))
+                lens.append(mutant_lens[i])
+                batch_sample.append((locs[i],seq[:mutant_lens[i]])) #the wild seq has to be of same length as the mutant
+
+            elif starts[i] is not None: #if mutated sequences are cropped and a start is returned
+                seq=seq[starts[i]:starts[i]+self.crop_len]
+                batch_sample.append((locs[i],seq))
+                lens.append(len(seq))
+
+            elif starts[i] is None and len(seq)>self.crop_len: # if mutated seq is not cropped but the wild is too long
+                seq,_=self.crop(seq,pos[i])
+                batch_sample.append((locs[i],seq))
+                lens.append(len(seq))
+            else:
+                batch_sample.append((locs[i],seq))
+                lens.append(len(seq))
+        # print('\n length of wild batch is %s'%lens)
+        return batch_sample
+    
 
 class Esm_finetune_delta(Esm_finetune):
     def __init__(self, esm_model=esm.pretrained.esm2_t12_35M_UR50D(),crop_val=True,esm_model_dim=480,n_class=2,truncation_len=None,unfreeze_n_layers=3,repr_layers=12,batch_sample='random',which_embds='01',lr=None,crop_len=512,debug=False,crop_mode='center',balanced_loss=False,local_range=0):
@@ -1141,20 +1374,3 @@ class Attention_Weight(nn.Module):
 
 
 
-class gnn(nn.Module):
-    def __init__(self, args):
-        super().__init__()
-        if args.gnn == 'gat': self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=args.hidden_dim, out_channels=args.hidden_dim//args.gat_attn_head, heads=args.gat_attn_head, edge_dim=args.edge_dim)
-                                                                    for _ in range(args.gnn_layer_num)] )
-        elif args.gnn == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(mlp(args.gin_mlp_layer, args.hidden_dim)), edge_dim=args.edge_dim)
-                                                                    for _ in range(args.gnn_layer_num)] )
-        self.relu = nn.ReLU()
-    
-    def forward(self, x, edge_index, edge_attr):
-        x_sum = x
-        for gnnconv in self.gnnconv_list:
-            x = self.relu(x)
-            x = gnnconv(x=x, edge_index=edge_index, edge_attr=edge_attr)
-            x_sum = x_sum + x
-        x = x_sum / (len(self.gnnconv_list) + 1)
-        return x

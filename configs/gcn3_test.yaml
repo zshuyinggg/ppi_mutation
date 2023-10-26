@@ -11,7 +11,7 @@ data_init:
     test_variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt
 gnn_init:
     gnn_type: gcn
-    node_dim: 5760
+    esm_dim: 5760
     num_gnn_layers: 2
     lr: 0.0001
 
