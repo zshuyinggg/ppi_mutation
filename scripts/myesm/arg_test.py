@@ -40,30 +40,15 @@ parser = argparse.ArgumentParser(
                     description='What the program does',
                     epilog='Text at the bottom of help')
 
-parser.add_argument('--test', type=int, default=0,help='1 if true; 0 if false')
-parser.add_argument('--numnodes', type=int, default=1,help='')
-parser.add_argument('--numdevices', type=int,default=1, help='')
-parser.add_argument('--unfreeze', type=int,default=6, help='')
-parser.add_argument('--esm', type=str, help='',default="esm2_t36_3B_UR50D")
 parser.add_argument('--config', type=str, help='',default="")
 args = parser.parse_args()
-
-
 all_args = get_config_dic(args.config)
-
-
-num_devices=args.numdevices
-num_nodes=args.numnodes
-unfreeze_layers=args.unfreeze
-esm_model=args.esm
-
-
 
 if __name__ == '__main__':
 
     seed_everything(42, workers=True)
-    proData=ProteinDataModule(train_val_ratio=0.8,low=0,medium=512,high=1028,veryhigh=1500,discard=True,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= 2,bs_medium=1,bs_long=1,which_dl='short')
-    myesm=Esm_finetune_delta(unfreeze_n_layers=unfreeze_layers,lr=12*1e-5,random_crop_len=512,include_wild=True)
+    proData=ProteinDataModule(all_args)
+    myesm=Esm_finetune_delta(all_args)
     logger=TensorBoardLogger(os.path.join(logging_path,'test'),name="%s"%esm_model,version='trainval0.8_lr1-05_esm_finetune_delta_short_only_no_wild_unfreeze_%s'%unfreeze_layers)
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=20, verbose=True, mode="min")
   
