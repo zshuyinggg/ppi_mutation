@@ -122,41 +122,54 @@ class plClassificationBaseModel(pl.LightningModule):
     def configure_optimizers(self,lr = None) :
         optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
         return optimizer
+def define_act(f_act):
+    if f_act=='relu':
+        f = nn.ReLU()
+        return f
 
+    elif f_act=='tanh':
+        f=nn.Tanh()
+        return f
+    else:return f_act #TODO 
 class GNN(plClassificationBaseModel):
-    def __init__(self, gnn_type, esm_dim, num_gnn_layers,residual_strategy='mean',dim_reduction=False,dropout=0,f_act='relu', gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,**args):
-        if f_act=='relu':f = nn.ReLU()
-        elif f_act=='tanh':f=nn.Tanh()
-        if dim_reduction:
-            node_dim=dim_reduction 
-        else: node_dim=esm_dim
-        if residual_strategy == 'mean': dim2clf,layernorm1_dim=2*node_dim, node_dim
-        elif residual_strategy == 'stack' : dim2clf,layernorm1_dim = (num_gnn_layers+1)*node_dim+esm_dim,node_dim*(num_gnn_layers+1)
+    def __init__(self, gnn_type, variant_initial_dim, wild_initial_dim, node_input_dim,num_gnn_layers,freeze=False,residual_strategy='mean',dim_reduction=False,dropout=0,f_act='relu', gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,**args):
+        f_act=define_act(f_act)
+        if residual_strategy == 'mean': dim2clf,layernorm1_dim=node_input_dim+variant_initial_dim, node_input_dim
+        elif residual_strategy == 'stack' : dim2clf,layernorm1_dim = (num_gnn_layers+1)*node_input_dim+variant_initial_dim,node_input_dim*(num_gnn_layers+1)
         super().__init__(input_dim=dim2clf,hidden_dims=[],out_dim=2,dropout=dropout)
+        self.node_dim,self.variant_initial_dim,self.wild_initial_dim=node_input_dim,variant_initial_dim,wild_initial_dim
         
-        self.dim_reduction,self.esm_dim,self.residual_strategy,self.f=dim_reduction,esm_dim,residual_strategy,f
-        if dim_reduction:
-            self.variantDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(esm_dim,esm_dim//2),f,nn.Dropout(dropout),nn.Linear(esm_dim//2,node_dim))
-            self.wildDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(esm_dim,esm_dim//2),f,nn.Dropout(dropout),nn.Linear(esm_dim//2,node_dim))
+        self.dim_reduction,self.residual_strategy,self.f=dim_reduction,residual_strategy,f_act
+        if variant_initial_dim!=node_input_dim:
+            if dim_reduction=='linear':
+                self.variantDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(variant_initial_dim,node_input_dim))
+            else:
+                self.variantDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(variant_initial_dim,variant_initial_dim//2),f_act,nn.Dropout(dropout),nn.Linear(variant_initial_dim//2,node_input_dim))
+        if wild_initial_dim!=node_input_dim:
+            if dim_reduction=='linear':     
+                self.wildDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(wild_initial_dim,node_input_dim))
+            else:self.wildDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(wild_initial_dim,wild_initial_dim//2),f_act,nn.Dropout(dropout),nn.Linear(wild_initial_dim//2,node_input_dim))
+
         self.sampler=sampler
-        if layers_dims: layers_dims=[node_dim] + layers_dims
-        else: layers_dims=[node_dim]*(num_gnn_layers+1)
+        if layers_dims: layers_dims=[node_input_dim] + layers_dims
+        else: layers_dims=[node_input_dim]*(num_gnn_layers+1)
         if gnn_type == 'gat': 
             self.gnnconv_list = nn.ModuleList( [GATConv(in_channels=layers_dims[i], out_channels=layers_dims[i+1]//gat_attn_head, heads=gat_attn_head,dropout=dropout)
                                                                     for i in range(num_gnn_layers)] )
-        elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_dim,out_channels=node_dim)
+        elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_input_dim,out_channels=node_input_dim)
                                                                     for _ in range(num_gnn_layers)] )
-        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(MLP(gin_mlp_layer, node_dim)))
+        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(MLP(gin_mlp_layer, node_input_dim)))
                                                                     for _ in range(num_gnn_layers)] )
         
-        self.node_dim=node_dim
+        self.node_input_dim=node_input_dim
 
         if layer_norm:
             self.layernorm=True
             self.layernorm1=nn.LayerNorm(layernorm1_dim)
-            self.layernorm2=nn.LayerNorm(esm_dim)
+            self.layernorm2=nn.LayerNorm(variant_initial_dim)
         else: self.layernorm=False
 
+      
         self.save_hyperparameters()
 
 
@@ -181,13 +194,6 @@ class GNN(plClassificationBaseModel):
         self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
         return loss
     
-    def input_dim_reduction(self,batch_size,node_embs,variant_indices):
-        node_embs=node_embs.view(batch_size,-1, self.esm_dim)
-        all_embs_transformed=self.wildDimReduction(node_embs)
-        # variant dim reduction
-        for i in range(batch_size):
-            all_embs_transformed[i,variant_indices[i]]=self.variantDimReduction(node_embs[i,variant_indices[i]])
-        return all_embs_transformed.view(-1,self.node_dim)
 
     def extract_merge_variant_from_layers(self,batch_size,x_reshaped,variant_indices):
         variants_aftergnn=[]
@@ -209,11 +215,13 @@ class GNN(plClassificationBaseModel):
         return variants_aftergnn,labels
 
     def gnn(self, x, edge_index):
+        # print(x.shape)
         x_stack=[x]
         x_sum = x
         for gnnconv in self.gnnconv_list:
             x = gnnconv(x=x, edge_index=edge_index)
             x = self.f(x)
+            # print(x.shape)
             if self.residual_strategy=='mean':x_sum = x_sum + x 
             x_stack.append(x)
         if self.residual_strategy=='mean':x = x_sum / (len(self.gnnconv_list) + 1)
@@ -223,17 +231,34 @@ class GNN(plClassificationBaseModel):
 
         return x
 
+    def merge_variant_embs_in_ppi(self, ppi_without_variant_embs,variant_embs,variant_indices):
+        bs=len(variant_indices)
+        all_embs_transformed=[]
+        variant_embs=variant_embs.view(bs,self.variant_initial_dim)
+        ppi_without_variant_embs=ppi_without_variant_embs.view(bs,-1, self.wild_initial_dim)
+        if self.wild_initial_dim!=self.node_input_dim:
+            all_wild_transfored=self.wildDimReduction(ppi_without_variant_embs)
+        if self.variant_initial_dim!=self.node_input_dim:
+            variant_transformed=self.variantDimReduction(variant_embs)
+        for i in range(bs):
+            wild_part1=all_wild_transfored[i,:variant_indices[i],:]
+            wild_part2=all_wild_transfored[i,variant_indices[i]:,:]
+
+            all_embs_transformed.append(torch.vstack([wild_part1,variant_transformed[i,:],wild_part2]))
+        
+        all_embs_transformed=torch.stack(all_embs_transformed,dim=0)
+        return all_embs_transformed.view(-1,self.node_input_dim)
+
     def forward(self,batch):
-        node_embs,variant_embs,variant_indices,labels=batch.x[0],batch.x[1],batch.x[2],batch.y[0]
+        ppi_without_variant_embs,variant_embs,variant_indices,labels=batch.x[0],batch.x[1],batch.x[2],batch.y[0]
+        ppi_embs_2_graph=self.merge_variant_embs_in_ppi(ppi_without_variant_embs,variant_embs,variant_indices)
         self.adj = SparseTensor.from_edge_index(batch.edge_index)
-        num_nodes=node_embs.shape[0]//len(labels)
-        if self.dim_reduction:
-            node_embs=self.input_dim_reduction(len(labels),node_embs,variant_indices)
-        x=self.gnn(node_embs,self.adj)
+        num_nodes=ppi_embs_2_graph.shape[0]//len(labels)
+        
+        x=self.gnn(ppi_embs_2_graph,self.adj)
         x_reshaped=x.view(len(labels),num_nodes,-1) # (batch_size, num_node, )
         variants_aftergnn=torch.vstack(self.extract_merge_variant_from_layers(len(labels),x_reshaped,variant_indices))
-        # variants_beforegnn=self.variantDimReduction(variant_embs.view(len(labels),self.esm_dim))
-        variants_beforegnn=variant_embs.view(len(labels),self.esm_dim)
+        variants_beforegnn=variant_embs.view(len(labels),self.variant_initial_dim)
         if self.layernorm is not False:variants_beforegnn=self.layernorm2(variants_beforegnn)
         x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
         y=self.classify(x2classify)
