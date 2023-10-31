@@ -14,7 +14,7 @@ import esm
 import torch.cuda as cuda
 from datasets_baseline1 import *
 import torch.nn.functional as F
-
+from lightning.pytorch.callbacks import BaseFinetuning
 from torchmetrics.classification import BinaryAUROC, MulticlassAUROC
 from torchmetrics.classification import AveragePrecision
 import re
@@ -38,6 +38,7 @@ class MLP(nn.Module):
     def __init__(self, layer_num, hidden_dim):
         super().__init__()
         self.relu = nn.ReLU()
+        self.in_features=hidden_dim
         self.linear_list = nn.ModuleList( [nn.Linear(hidden_dim, hidden_dim) for _ in range(layer_num)] )
     def forward(self, x):
         for n, linear in enumerate(self.linear_list):
@@ -120,7 +121,7 @@ class plClassificationBaseModel(pl.LightningModule):
 
 
     def configure_optimizers(self,lr = None) :
-        optimizer=optim.Adam(self.parameters(),lr=lr if lr else self.lr)
+        optimizer=optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),lr=lr if lr else self.lr)
         return optimizer
 def define_act(f_act):
     if f_act=='relu':
@@ -132,7 +133,7 @@ def define_act(f_act):
         return f
     else:return f_act #TODO 
 class GNN(plClassificationBaseModel):
-    def __init__(self, gnn_type, variant_initial_dim, wild_initial_dim, node_input_dim,num_gnn_layers,freeze=False,residual_strategy='mean',dim_reduction=False,dropout=0,f_act='relu', gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,**args):
+    def __init__(self, gnn_type, variant_initial_dim, wild_initial_dim, node_input_dim,num_gnn_layers,freeze=False,residual_strategy='mean',dim_reduction=False,dropout=0,f_act='relu', gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,load_ckpt_before_training=None,**args):
         f_act=define_act(f_act)
         if residual_strategy == 'mean': dim2clf,layernorm1_dim=node_input_dim+variant_initial_dim, node_input_dim
         elif residual_strategy == 'stack' : dim2clf,layernorm1_dim = (num_gnn_layers+1)*node_input_dim+variant_initial_dim,node_input_dim*(num_gnn_layers+1)
@@ -158,7 +159,7 @@ class GNN(plClassificationBaseModel):
                                                                     for i in range(num_gnn_layers)] )
         elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_input_dim,out_channels=node_input_dim)
                                                                     for _ in range(num_gnn_layers)] )
-        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(nn.Sequential(MLP(gin_mlp_layer, node_input_dim)))
+        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(MLP(gin_mlp_layer, node_input_dim),edge_dim=1)
                                                                     for _ in range(num_gnn_layers)] )
         
         self.node_input_dim=node_input_dim
@@ -168,7 +169,9 @@ class GNN(plClassificationBaseModel):
             self.layernorm1=nn.LayerNorm(layernorm1_dim)
             self.layernorm2=nn.LayerNorm(variant_initial_dim)
         else: self.layernorm=False
-
+        if load_ckpt_before_training: 
+            self.load_from_checkpoint(load_ckpt_before_training,**args)
+            print('load from %s'%load_ckpt_before_training)
       
         self.save_hyperparameters()
 
@@ -263,6 +266,15 @@ class GNN(plClassificationBaseModel):
         x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
         y=self.classify(x2classify)
         return y
+
+
+class FreezeGNN(BaseFinetuning):
+    def __init__(self) -> None:
+        super().__init__()
+    def freeze_before_training(self, pl_module) :
+        self.freeze(pl_module.gnnconv_list)
+        self.freeze([pl_module.variantDimReduction,pl_module.wildDimReduction,pl_module.layernorm1,pl_module.layernorm2])
+
 
 class evaluate_graph_context(plClassificationBaseModel):
     def __init__(self, pretrained_gnn, input_dim,hidden_dims,out_dim,**args):
