@@ -1,4 +1,5 @@
 import copy
+from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 
 import torch
 from torch.utils.data import Dataset
@@ -27,6 +28,7 @@ def find_current_path():
 
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
+from scripts.utils_clinvar import *
 
 from scripts.utils import *
 import pandas as pd
@@ -38,6 +40,27 @@ from torchvision import transforms, utils
 num_partitions = 28
 
 
+class ProteinEmbeddings(Dataset):
+    def __init__(self,embedding_path,clinvar_csv) -> None:
+        super().__init__()
+        self.embeddings=torch.load(embedding_path)
+        self.all_sequences = pd.read_csv(clinvar_csv)
+
+    def __len__(self):
+        return len(self.embeddings)
+
+    def __getitem__(self, idx, uniprot=None, label=None):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        sequences = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Seq')]
+        uniprot = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('UniProt')]
+        name = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Name')]
+        labels=self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Label')]
+        sample={'label':torch.tensor(labels).int(),'UniProt':uniprot,'Name':name,'Loc':get_loc_from_name(name)} #multiple or single?
+
+        return sample
+
+
 
 
 
@@ -47,8 +70,7 @@ class ProteinSequence(Dataset):
     label decides only positive samples(1), only negative samples(0), or both (None)
     """
 
-    def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'), gen_file_path=data_path + '/2019_1_sequences_terminated.csv', gen_file=False,
-                 all_uniprot_id_file=os.path.join(data_path,'single_protein_seq/uniprotids_humap_huri.txt'),
+    def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'), 
                  test_mode=False,
                  transform=None,
                  random_seed=52,
@@ -58,27 +80,18 @@ class ProteinSequence(Dataset):
         :param clinvar_csv:
         :param gen_file_path:
         :param gen_file:
-        :param all_uniprot_id_file:
         :param test_mode:
-        :param transform:
         :param train_val_ratio: ration for training set
-        :param train_or_val: 'Train' or 'Val'
         :param random_seed:
         """
         self.random_seed=random_seed
         print('Reading file')
-        self.clinvar = pd.read_csv(clinvar_csv)
+        self.all_sequences = pd.read_csv(clinvar_csv)
         self.test_mode=test_mode
-        self.gen_file_path = gen_file_path
-        self.gen_file=gen_file
         self.transform=transform
-        self.all_ppi_uniprot_ids = eval(open(all_uniprot_id_file).readline())
-        self.clinvar = self.clinvar[
-            [uniprot in self.all_ppi_uniprot_ids for uniprot in self.clinvar['UniProt'].tolist()]]
+
         if test_mode: 
-            self.clinvar=self.clinvar.loc[:10,:]
-        if gen_file:self.gen_sequence_file()
-        else:self.read_sequence_file()
+            self.all_sequences=self.all_sequences.loc[:10,:]
         if test_mode:self.all_sequences=self.all_sequences[:10]
         self.remove_na()
         torch.manual_seed(random_seed)
@@ -87,6 +100,7 @@ class ProteinSequence(Dataset):
         self.all_sequences=self.all_sequences.sample(frac=1,random_state=random_seed).reset_index(drop=True)
         #set this to class property to make sure train and val are split on the same indexes
         self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=0 #wild type is considered the same as benign
+        self.all_sequences.loc[self.all_sequences['Label']==-1,'Label']=0 
         if delta:
             self.all_sequences=self.all_sequences[self.all_sequences['Name']!='0']
             torch.manual_seed(random_seed)
@@ -99,20 +113,6 @@ class ProteinSequence(Dataset):
     def remove_na(self):
         self.all_sequences.dropna(inplace=True,ignore_index=True)
         print('nan removed')
-    def cut_seq(self,low,high,discard):
-        self.high=high
-        self.low=low
-        s = ProteinSequence.all_sequences.Seq.str.len()
-        if high is None:
-            high=np.inf
-        if discard:
-            print('Discarded %s sequences which are longer than %s'%(len(ProteinSequence.all_sequences[s>=self.discard_cutoff]),self.discard_cutoff))
-        cond1 = s < self.high
-        cond2 = s >= self.low
-        self.all_sequences = self.ProteinSequence[cond1 & cond2]
-        print('dataset cut to length between %s and %s' %(self.low,self.high))
-        print('sequences count = %s'%self.__len__())
-        print('----------------------------------------------')
 
     def set_class_seq(self):
         ProteinSequence.all_sequences=self.all_sequences
@@ -123,49 +123,6 @@ class ProteinSequence(Dataset):
         self.all_sequences.loc[self.all_sequences['Name']=='0','Label']=2
         print(self.all_sequences['Label'].describe())
         # self.all_sequences.to_csv(self.gen_file_path)
-
-    def read_sequence_file(self):
-        if os.path.isfile(self.gen_file_path):
-            self.all_sequences = pd.read_csv(self.gen_file_path)
-            self.all_sequences=self.all_sequences[self.all_sequences['Seq'].apply(lambda x: not('Error' in x))]
-            self.all_sequences.reset_index(drop=True, inplace=True)
-        else: self.gen_sequence_file()
-    def gen_sequence_file(self) -> object:
-        if self.test_mode:print('-----Test mode on-----------')
-        print('Initiating datasets....\n')
-        print('Generating mutant sequences...\n')
-        df_sequence_mutant = self.clinvar.loc[:, ['#AlleleID', 'label', 'UniProt', 'Name']]  # TODO review status
-        df_sequence_mutant=df_sequence_mutant[df_sequence_mutant['UniProt'].isin(self.all_ppi_uniprot_ids)]
-        print('There are %s rows'%len(df_sequence_mutant))
-        # df_sequence_mutant['Seq'] = [gen_mutant_one_row(uniprot_id, name) for uniprot_id, name in \
-        #                              zip(df_sequence_mutant['UniProt'], df_sequence_mutant['Name'])]
-        df_dask = ddf.from_pandas(df_sequence_mutant, npartitions=num_partitions)
-        print('lazy partitions set')
-        df_dask['Seq'] = df_dask.map_partitions(gen_mutant_from_df, meta=('str'))
-        df_sequence_mutant=df_dask.compute(scheduler='multiprocessing')
-        len_wild = len(self.all_ppi_uniprot_ids)
-        df_sequence_mutant.to_csv(self.gen_file_path)
-        df_sequence_mutant=pd.read_csv(self.gen_file_path)
-        # del df_dask
-        print('Generating wild sequences...\n')
-        self.all_ppi_uniprot_ids=list(self.all_ppi_uniprot_ids)
-        if self.test_mode:
-            self.all_ppi_uniprot_ids=self.all_ppi_uniprot_ids[:100]
-            len_wild = 100
-
-        df_sequence_wild = pd.DataFrame(0, index=np.arange(len_wild),
-                                        columns=['#AlleleID', 'Label', 'UniProt', 'Name', 'Seq'])
-        df_sequence_wild['UniProt'] = list(self.all_ppi_uniprot_ids)
-        df_dask = ddf.from_pandas(df_sequence_wild, npartitions=num_partitions)
-        df_dask['Seq'] = df_dask.map_partitions(get_sequence_from_df, meta=('str'))
-        df_sequence_wild=df_dask.compute(scheduler='multiprocessing')
-
-        # df_sequence_wild['Seq'] = [get_sequence_from_uniprot_id(id) for id in df_sequence_wild['UniProt']]
-        df_sequence_wild['Label'] = [-1] * len_wild
-        df_sequences = pd.concat([df_sequence_wild, df_sequence_mutant])
-        df_sequences.to_csv(self.gen_file_path)
-        self.all_sequences = df_sequences # TODO
-        return df_sequences
 
 
     def __len__(self):
@@ -178,7 +135,7 @@ class ProteinSequence(Dataset):
         uniprot = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('UniProt')]
         name = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Name')]
         labels=self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Label')]
-        sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int(),'UniProt':uniprot,'Name':name} #multiple or single?
+        sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int(),'UniProt':uniprot,'Name':name,'Loc':get_loc_from_name(name)} #multiple or single?
         if self.transform:
             sample=self.transform(sample)
         return sample
@@ -194,39 +151,18 @@ class ProteinSequence(Dataset):
 
         return df
 
+class ProteinWildSequence(Dataset):
+    def __init__(self,file_path='/scratch/user/zshuying/ppi_mutation/ppi_seq_huri_humap.csv'):
+  
+        self.df_ppi=pd.read_csv(file_path)
 
+    def __len__(self):
+        return len(self.df_ppi)
+    
+    def __getitem__(self,idx):
+        uniprot,sequence=self.df_ppi.iloc[idx,:]['UniProt'],self.df_ppi.iloc[idx,:]['seq']
+        return{'seq':sequence,'UniProt':uniprot}
 
-class ProteinSequencePair(ProteinSequence):
-        def __init__(self):
-            """
-            :param clinvar_csv:
-            :param gen_file_path:
-            :param gen_file:
-            :param all_uniprot_id_file:
-            :param test_mode:
-            :param transform:
-            :param train_val_ratio: ration for training set
-            :param train_or_val: 'Train' or 'Val'
-            :param random_seed:
-            """
-            super().__init__(clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'), gen_file_path=data_path + '/2019_1_sequences_terminated.csv', gen_file=False,
-                 all_uniprot_id_file=os.path.join(data_path,'single_protein_seq/uniprotids_humap_huri.txt'),
-                 test_mode=False,
-                 transform=None,
-                 random_seed=52)
-        def __getitem__(self, idx=None, uniprot=None, label=None):
-            if torch.is_tensor(idx):
-                idx = idx.tolist()
-            sequences = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Seq')]
-            labels=self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Label')]
-            sample={'idx':torch.tensor(idx).float(), 'seq':sequences,'label':torch.tensor(labels).int(),'Name':self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('Name')],'UniProt':self.all_sequences.iloc[idx,self.all_sequences.columns.get_loc('UniProt')]} #multiple or single?
-            return sample
-
-
-
-        def get_idx_from_uniprot(self,uniprot):
-            idx = self.all_sequences[self.all_sequences['UniProt']==uniprot].index
-            return idx
 
 
 
@@ -280,52 +216,98 @@ def cut_seq(seqDataset,low,medium,high,veryhigh,discard):
 
 
 class ProteinDataModule(pl.LightningDataModule):
-    def __init__(self, low,medium,high,veryhigh,train_val_ratio=0.9,discard=True,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,random_crop_len=False,which_dl=None):
+    def __init__(self, low=0,medium=0,high=0,veryhigh=0,train_val_ratio=0.9,discard=True,crop_val=False,bs_short=4,bs_medium=2,bs_long=1,num_devices=1,num_nodes=1,delta=True,crop_len=False,which_dl=None,clinvar_csv=os.path.join(script_path,'merged_2019_1.csv'),mix_val=False,train_mix=False,random_seed=42,test=False,**args):
         super().__init__()
-        self.dataset=ProteinSequence(delta=delta)
-        self.random_crop_len=random_crop_len
+        self.dataset=ProteinSequence(clinvar_csv=clinvar_csv,delta=delta,random_seed=random_seed)
+        self.crop_len=crop_len
+        self.train_mix=train_mix
         self.which_dl=which_dl
-        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long)
+        self.max_short=medium
+        self.max_medium=high
+        self.max_long=veryhigh
+        self.mix_val=mix_val
+        self.crop_val=crop_val
+        self.seed=random_seed
+        self.test=test
+        self.gen_dataloader(train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,train_mix)
         
-    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long):
-        train_set,val_set= split_train_val(self.dataset,train_val_ratio)
-        print('Splitting training set by length\n=======================')
-        train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
-        print('Splitting validation set by length\n=======================')
-        val_short_set,val_medium_set,val_long_set=cut_seq(val_set,low,medium,high,veryhigh,True)
+    def gen_dataloader(self,train_val_ratio,low,medium,high,veryhigh,num_devices,num_nodes,bs_short,bs_medium,bs_long,train_mix):
+        if self.test:
+            print('Splitting train val with ratio = %s, did not seperate training set with lengths'%train_val_ratio)
+            train_set,val_set= split_train_val(self.dataset,train_val_ratio,random_seed=self.seed)
+                
+            self.val_mix_dataloader = DataLoader(val_set, batch_size=bs_long,
+                                            shuffle=False, num_workers=8,drop_last=True)
 
-        train_short_len,train_medium_len,train_long_len,\
-        val_short_len,val_medium_len,val_long_len=\
-        len(train_short_set),len(train_medium_set),len(train_long_set),\
-        len(val_short_set),len(val_medium_set),len(val_long_set)
+        else:
+            if train_mix:
+                print('Splitting train val with ratio = %s, did not seperate training set with lengths'%train_val_ratio)
+                train_set,val_set= split_train_val(self.dataset,train_val_ratio,random_seed=self.seed)
+                self.train_mix_dataloader = DataLoader(train_set, batch_size=bs_long,
+                                                shuffle=True, num_workers=8,drop_last=True)
+                self.val_mix_dataloader = DataLoader(val_set, batch_size=bs_long,
+                                            shuffle=False, num_workers=8,drop_last=True)
+                self.train_batch_num=len(train_set)//(num_devices*num_nodes*bs_short)
+                self.val_batch_num=len(val_set)//(num_devices*num_nodes*bs_short)
+                train_name_list=train_set.dataset.all_sequences.iloc[train_set.indices]['Name'].tolist()
+                val_name_list=val_set.dataset.all_sequences.iloc[val_set.indices]['Name'].tolist()
+                with open(pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_train_name_list_%s'%self.seed),'w') as f:
+                    f.writelines(str(train_name_list))
+                with open(pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_val_name_list_%s'%self.seed),'w') as f:
+                    f.writelines(str(val_name_list))
+            
+            else:
+                train_set,val_set= split_train_val(self.dataset,train_val_ratio,random_seed=self.seed)
+                
+                print('Splitting training set by length\n=======================')
+                train_short_set,train_medium_set,train_long_set=cut_seq(train_set,low,medium,high,veryhigh,True)
+                train_short_len,train_medium_len,train_long_len=len(train_short_set),len(train_medium_set),len(train_long_set),
+                
+                
+                
+                
+                print('Splitting validation set by length\n=======================')
+                val_short_set,val_medium_set,val_long_set=cut_seq(val_set,low,medium,high,veryhigh,True)
+                val_mix_set,_,_=cut_seq(val_set,low,veryhigh,veryhigh+1,veryhigh+2,True)
+                val_short_len,val_medium_len,val_long_len=\
+                len(val_short_set),len(val_medium_set),len(val_long_set)
 
-        #make sure each machine gets the same num of batches otherwise it will hang
-        self.ts, self.tm, self.tl, self.vs, self.vm, self.vl=\
-                        train_short_len//(num_devices*num_nodes*bs_short),\
-                        train_medium_len//(num_devices*num_nodes*bs_medium),\
-                        train_long_len//(num_devices*num_nodes*bs_long),\
-                        val_short_len//(num_devices*num_nodes*bs_short),\
-                        val_medium_len//(num_devices*num_nodes*bs_medium),\
-                        val_long_len//(num_devices*num_nodes*bs_long)
+                
+                if self.crop_val:val_mix_ds=2 
+                else: val_mix_ds=1
+                #make sure each machine gets the same num of batches otherwise it will hang
+                self.ts, self.tm, self.tl, self.vs, self.vm, self.vl=\
+                                train_short_len//(num_devices*num_nodes*bs_short),\
+                                train_medium_len//(num_devices*num_nodes*bs_medium),\
+                                train_long_len//(num_devices*num_nodes*bs_long),\
+                                val_short_len//(num_devices*num_nodes*bs_short),\
+                                val_medium_len//(num_devices*num_nodes*bs_medium),\
+                                val_long_len//(num_devices*num_nodes*bs_long)
 
-
-        self.train_short_dataloader = DataLoader(train_short_set, batch_size=bs_short,
-                                            shuffle=True, num_workers=20,drop_last=True)
-        self.val_short_dataloader = DataLoader(val_short_set, batch_size=bs_short,
-                                          shuffle=False, num_workers=20,drop_last=True)
-        self.train_medium_dataloader = DataLoader(train_medium_set, batch_size=bs_medium,
-                                             shuffle=True, num_workers=20,drop_last=True)
-        self.val_medium_dataloader = DataLoader(val_medium_set, batch_size=bs_medium,
-                                           shuffle=False, num_workers=20,drop_last=True)
-        self.train_long_dataloader = DataLoader(train_long_set, batch_size=bs_long,
-                                           shuffle=True, num_workers=20,drop_last=True)
-        self.val_long_dataloader = DataLoader(val_long_set, batch_size=bs_long,
-                                         shuffle=False, num_workers=20,drop_last=True)
-
+                if train_short_len:
+                    self.train_short_dataloader = DataLoader(train_short_set, batch_size=bs_short,
+                                                        shuffle=True, num_workers=20,drop_last=True)
+                    
+                    self.train_medium_dataloader = DataLoader(train_medium_set, batch_size=bs_medium,
+                                                        shuffle=True, num_workers=20,drop_last=True)
+                    self.train_long_dataloader = DataLoader(train_long_set, batch_size=bs_long,
+                                                    shuffle=True, num_workers=20,drop_last=True)
+                self.val_short_dataloader = DataLoader(val_short_set, batch_size=1,
+                                                shuffle=False, num_workers=20,drop_last=True)
+                self.val_medium_dataloader = DataLoader(val_medium_set, batch_size=1,
+                                                shuffle=False, num_workers=20,drop_last=True)
+                
+                self.val_long_dataloader = DataLoader(val_long_set, batch_size=1,
+                                                shuffle=False, num_workers=20,drop_last=True)
+                self.val_mix_dataloader=DataLoader(val_mix_set, batch_size=val_mix_ds,
+                                                shuffle=False, num_workers=20,drop_last=True)
 
     def train_dataloader(self):
         current_epoch=self.trainer.current_epoch
-
+        if self.train_mix:
+            self.trainer.limit_train_batches=self.train_batch_num-1
+            self.which_dl='mix'
+            return self.train_mix_dataloader
         if self.which_dl=='short':
             self.trainer.limit_train_batches=self.ts-1
             self.trainer.which_dl='short'
@@ -358,6 +340,13 @@ class ProteinDataModule(pl.LightningDataModule):
             return self.train_long_dataloader
 
     def val_dataloader(self):
+        if self.mix_val:
+            self.trainer.limit_val_batches=self.val_batch_num-1
+
+            print('Evaluating validation with mixture of short,medium,long seqs')
+
+            return self.val_mix_dataloader
+
         if self.which_dl=='short':
             self.trainer.limit_val_batches=self.ts-1
             self.trainer.which_dl='short'
@@ -367,7 +356,6 @@ class ProteinDataModule(pl.LightningDataModule):
             self.trainer.limit_val_batches=self.tm-1
             self.trainer.which_dl='medium'
             print('medium dataset')
-
             return self.val_medium_dataloader
         if self.which_dl=='long':
             self.trainer.limit_val_batches=self.tl-1
@@ -390,13 +378,33 @@ class ProteinDataModule(pl.LightningDataModule):
             self.trainer.limit_val_batches=self.vl-1
             return self.val_long_dataloader
 
+    def test_dataloader(self) :
+        return self.val_mix_dataloader
 
 
+class AllProteinVariantData(ProteinDataModule):
+    """
+    Subclass of ProteinSequence, without dividing train,val,test
+    """
 
+    def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'),batch_size=20,num_workers=15):
+        super().__init__(clinvar_csv=clinvar_csv)
+        self.batch_size=batch_size
+        self.num_workers=num_workers
+        self.dataset=ProteinSequence(clinvar_csv=clinvar_csv,delta=True)
+    def val_dataloader(self):
+        return DataLoader(self.dataset,batch_size=self.batch_size,shuffle=False, num_workers=self.num_workers,drop_last=True)
+    def test_dataloader(self):
+        return DataLoader(self.dataset,batch_size=self.batch_size,shuffle=False, num_workers=self.num_workers,drop_last=True)
 
-
-
-
+class AllWildData(pl.LightningDataModule):
+    def __init__(self):
+        super().__init__()
+        self.dataset=ProteinWildSequence()
+    def train_dataloader(self) :
+        return DataLoader(self.dataset,shuffle=False,batch_size=20,num_workers=15)
+    def val_dataloader(self) :
+        return DataLoader(self.dataset,shuffle=False,batch_size=20,num_workers=15)
 
 class EsmMeanEmbeddings(Dataset):
     def __init__(self,if_initial_merge=False,dirpath=data_path):
@@ -459,41 +467,6 @@ class EsmMeanEmbeddings(Dataset):
                 'label':self.labels[idx]}
 
 
-class toHF(object):
-    """add space in between each amino acid in order to put it in tokenizer of huggingface"""
-    def __call__(self,sample):
-        sequences=sample['seq']
-        sequences=" ".join(list(sequences))
-        sample['seq']=sequences 
-        return sample
-
-
-class ToTensor(object):
-    """convert pandas object to Tensors"""
-
-    def __call__(self,sample):
-        idx,sequences,labels=sample['idx'],sample['seq'],sample['label']
-        return {'idx':torch.tensor(idx),
-        'seq':torch.tensor(sequences),
-        'label':torch.tensor(labels)}
-
-
-class RandomCrop(object):
-    def __init__(self,crop_size):
-        assert isinstance(crop_size,int)
-        self.crop_size=crop_size
-
-    def __call__(self,sample):
-        sequence=sample['seq']
-        l=len(sequence)
-        if self.crop_size<l:
-            start=np.random.randint(0,l-self.crop_size)
-        else:
-            start=0
-        new_seq=sequence[start:]
-        return {'idx':sample['idx'], 'seq':new_seq,'label':sample['label']}
-
-
 
 def split_train_val(dataset,train_val_split=0.8,random_seed=52):
     train_set_size=int(len(dataset)*train_val_split)
@@ -501,4 +474,5 @@ def split_train_val(dataset,train_val_split=0.8,random_seed=52):
     seed=torch.Generator().manual_seed(random_seed)
     train_set,valid_set=data.random_split(dataset,[train_set_size,valid_set_size],generator=seed)
     print('Split dataset into train, val with the rate of %s'%train_val_split)
+    print(train_set.dataset.all_sequences['Label'].value_counts())
     return train_set,valid_set
