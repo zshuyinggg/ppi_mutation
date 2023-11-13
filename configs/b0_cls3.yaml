@@ -15,9 +15,9 @@ mix_val: True
 train_mix: True
 random_seed: 1050
 esm_model: esm.pretrained.esm2_t6_8M_UR50D()
-dropout: 0.1
+dropout: 0.3
 in_dim_clf: 640
 repr_layers: 6
-lr: 0.0004
+lr: 0.00000001
 crop_len: 512
 seed: 1050

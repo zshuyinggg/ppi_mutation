@@ -12,8 +12,10 @@ data_init:
 
 gnn_init:
     gnn_type: gcn
-    esm_dim: 5760
-    dim_reduction: 64
+    b0_dim: 5760
+    node_input_dim: 64
+    variant_initial_dim: 5760
+    wild_initial_dim: 5760
     num_gnn_layers: 3
     lr: 0.0001
     layer_norm: True
@@ -23,4 +25,4 @@ gnn_init:
 num_nodes: 2
 num_devices: 2
 test: True
-ckpt: /scratch/user/zshuying/ppi_mutation/logs/baseline1/gcn7.yaml_seed1050_-epoch=06-val_loss=0.42.ckpt
+ckpt: /scratch/user/zshuying/ppi_mutation/logs/baseline1/gcn7.yaml_seed1050_-epoch=07-val_loss=0.42.ckpt

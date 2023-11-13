@@ -21,3 +21,5 @@ repr_layers: 6
 lr: 0.0004
 crop_len: 512
 seed: 1050
+ckpt: /scratch/user/zshuying/ppi_mutation/logs/b0_cls/b0_cls0.yaml-epoch=09-val_loss=0.44.ckpt
+test: True

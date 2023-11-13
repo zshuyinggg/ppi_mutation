@@ -36,15 +36,15 @@ def find_current_path():
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
 from scripts.utils import *
-from torch_geometric.nn import GATConv, GINEConv, GCNConv, SAGEConv
+from torch_geometric.nn import GATConv, GINConv, GCNConv,SAGEConv
 
 
 class MLP(nn.Module):
     def __init__(self, layer_num, hidden_dim):
         super().__init__()
         self.relu = nn.ReLU()
-        self.linear_list = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for _ in range(layer_num)])
-
+        self.in_features=hidden_dim
+        self.linear_list = nn.ModuleList( [nn.Linear(hidden_dim, hidden_dim) for _ in range(layer_num)] )
     def forward(self, x):
         for n, linear in enumerate(self.linear_list):
             x = linear(x)
@@ -126,8 +126,9 @@ class plClassificationBaseModel(pl.LightningModule):
                 y = self.softmax(layer(x))
         return y
 
-    def configure_optimizers(self, lr=None):
-        optimizer = optim.Adam(self.parameters(), lr=lr if lr else self.lr)
+
+    def configure_optimizers(self,lr = None) :
+        optimizer=optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),lr=lr if lr else self.lr)
         return optimizer
 
 
@@ -281,6 +282,24 @@ class GNN(plClassificationBaseModel):
 
         return x
 
+    def merge_variant_embs_in_ppi(self, ppi_without_variant_embs, variant_embs, variant_indices):
+        bs = len(variant_indices)
+        all_embs_transformed = []
+        variant_embs = variant_embs.view(bs, self.variant_initial_dim)
+        ppi_without_variant_embs = ppi_without_variant_embs.view(bs, -1, self.wild_initial_dim)
+        if self.wild_initial_dim != self.node_input_dim:
+            all_wild_transfored = self.wildDimReduction(ppi_without_variant_embs)
+        if self.variant_initial_dim != self.node_input_dim:
+            variant_transformed = self.variantDimReduction(variant_embs)
+        for i in range(bs):
+            wild_part1 = all_wild_transfored[i, :variant_indices[i], :]
+            wild_part2 = all_wild_transfored[i, variant_indices[i]:, :]
+
+            all_embs_transformed.append(torch.vstack([wild_part1, variant_transformed[i, :], wild_part2]))
+
+        all_embs_transformed = torch.stack(all_embs_transformed, dim=0)
+        return all_embs_transformed.view(-1, self.node_input_dim)
+
     def forward(self, batch):
         node_embs, variant_embs, variant_indices, labels = batch.x[0], batch.x[1], batch.x[2], batch.y[0]
         self.adj = SparseTensor.from_edge_index(batch.edge_index)
@@ -296,8 +315,16 @@ class GNN(plClassificationBaseModel):
         if self.layernorm is not False: variants_beforegnn = self.layernorm2(variants_beforegnn)
         x2classify = torch.hstack([variants_beforegnn, variants_aftergnn])
         y = self.classify(x2classify)
-        return y
+        num_nodes=ppi_embs_2_graph.shape[0]//len(labels)
 
+        x=self.gnn(ppi_embs_2_graph,self.adj)
+        x_reshaped=x.view(len(labels),num_nodes,-1) # (batch_size, num_node, )
+        variants_aftergnn=torch.vstack(self.extract_merge_variant_from_layers(len(labels),x_reshaped,variant_indices))
+        variants_beforegnn=variant_embs.view(len(labels),self.variant_initial_dim)
+        if self.layernorm is not False:variants_beforegnn=self.layernorm2(variants_beforegnn)
+        x2classify=torch.hstack([variants_beforegnn,variants_aftergnn])
+        y=self.classify(x2classify)
+        return y
 
 class evaluate_graph_context(plClassificationBaseModel):
     def __init__(self, pretrained_gnn, input_dim, hidden_dims, out_dim, **args):

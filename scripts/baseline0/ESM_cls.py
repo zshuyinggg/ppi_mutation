@@ -48,7 +48,7 @@ if __name__ == '__main__':
                             logger=logger,
                             devices=config['num_devices'], 
                             num_nodes=config['num_nodes'], 
-                            strategy=DDPStrategy(), 
+                            strategy=DDPStrategy(find_unused_parameters=True), 
                             accelerator="gpu",
                             default_root_dir=logging_path, 
                             callbacks=[early_stop_callback,checkpoint_callback],

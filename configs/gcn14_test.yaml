@@ -2,22 +2,29 @@ data_init:
     root: /scratch/user/zshuying/ppi_mutation/data/baseline1
     train_clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_1_no_error.csv
     train_val_variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_variant_embds.pt
-    wild_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/all_wild_embeddings.pt
+    wild_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline1/all_wild_esm_embds.pt
     batch_size: 3
     num_workers: 15
     random_seed: 1050
     train_val_ratio: 0.8
     test_clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv
     test_variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt
-
+    train_list_name: 2019_train_name_list_1050
+    val_list_name: 2019_val_name_list_1050
 gnn_init:
     gnn_type: gcn
-    b0_dim: 5760
-    num_gnn_layers: 2
-    lr: 0.0001
+    variant_initial_dim: 5760
+    variant_hidden_dim: 2880
+    dim_reduction: True
+    node_input_dim: 64
+    wild_initial_dim: 320
+    num_gnn_layers: 4
+    lr: 0.000001
     layer_norm: True
     dropout: 0.3
-    f_act: tanh
+    residual_strategy: stack
 
-num_nodes: 5
+num_nodes: 10
 num_devices: 2
+ckpt: /scratch/user/zshuying/ppi_mutation/logs/baseline1/gcn14.yaml_seed1050_-epoch=02-val_loss=0.42.ckpt
+test: True

@@ -300,19 +300,22 @@ class plClassificationBaseModel(pl.LightningModule):
         return optimizer
     
 class Esm_cls_token(plClassificationBaseModel):
-    def __init__(self, esm_model=esm.pretrained.esm2_t36_3B_UR50D(),dropout=0.1,in_dim_clf=2560,repr_layers=36,lr=4*1e-3,crop_len=512,**args):
         super().__init__(input_dim=in_dim_clf,hidden_dims=[],out_dim=2,dropout=dropout,lr=lr)
         self.save_hyperparameters()
         if isinstance(esm_model,str):self.esm_model, alphabet=eval(esm_model)
         else:self.esm_model, alphabet=esm_model
         self.batch_converter=alphabet.get_batch_converter()
         self.alphabet,self.repr_layers,self.crop_len=alphabet,repr_layers,crop_len
+        self.include=include
         
     def training_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
-        starts,labels,_,mutated_batch_samples,_=self.get_cropped_batch_samples(batch,batch_idx)
-        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
-        y=self.classify(mutated_embs.float().to(self.device))
+        starts,labels,_,mutated_batch_samples,wild_batch_samples=self.get_cropped_batch_samples(batch,batch_idx)
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts)
+        wild_embs=self.get_esm_embedings(wild_batch_samples,starts)
+        if 'wild' in self.include:embs=torch.hstack([mutated_embs,wild_embs])
+        else: embs=mutated_embs
+        y=self.classify(embs.float().to(self.device))
         del mutated_embs
         loss=self.ce_loss(y,labels)
         self.train_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
@@ -320,9 +323,13 @@ class Esm_cls_token(plClassificationBaseModel):
         return loss
     def validation_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
-        starts,labels,_,mutated_batch_samples,_=self.get_cropped_batch_samples(batch,batch_idx)
-        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
-        y=self.classify(mutated_embs.float().to(self.device))
+        starts,labels,_,mutated_batch_samples,wild_batch_samples=self.get_cropped_batch_samples(batch,batch_idx)
+        wild_embs=self.get_esm_embedings(wild_batch_samples,starts)
+
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts)
+        if 'wild' in self.include:embs=torch.hstack([mutated_embs,wild_embs])
+        else: embs=mutated_embs
+        y=self.classify(embs.float().to(self.device))
         del mutated_embs
         loss=self.ce_loss(y,labels)
         self.val_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
@@ -330,9 +337,13 @@ class Esm_cls_token(plClassificationBaseModel):
         return loss
     def test_step(self, batch, batch_idx):
         torch.cuda.empty_cache()
-        starts,labels,_,mutated_batch_samples,_=self.get_cropped_batch_samples(batch,batch_idx)
-        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts=starts)
-        y=self.classify(mutated_embs.float().to(self.device))
+        starts,labels,_,mutated_batch_samples,wild_batch_samples=self.get_cropped_batch_samples(batch,batch_idx)
+        wild_embs=self.get_esm_embedings(wild_batch_samples,starts)
+
+        mutated_embs=self.get_esm_embedings(mutated_batch_samples,starts)
+        if 'wild' in self.include:embs=torch.hstack([mutated_embs,wild_embs])
+        else: embs=mutated_embs
+        y=self.classify(embs.float().to(self.device))
         del mutated_embs
         loss=self.ce_loss(y,labels)
         self.test_out.append(torch.hstack([y,labels.reshape(len(labels),1)]).cpu())
@@ -350,11 +361,39 @@ class Esm_cls_token(plClassificationBaseModel):
     def get_cropped_batch_samples(self,batch,batch_idx):
         labels=batch['label'].long()
         locs=batch['Loc'].long()
-        seqs,starts,pos=self.crop_batch(batch,batch_idx)
+        seqs,starts,pos=self.crop_batch(batch)
         batch['seq']=seqs
         mutated_batch_samples=list(zip(locs,seqs))
-        # wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos) 
-        return starts,labels,locs,mutated_batch_samples
+        wild_batch_samples=self.get_wild_batch(batch,starts=starts,pos=pos) 
+        return starts,labels,locs,mutated_batch_samples,wild_batch_samples
+    def get_wild_batch(self,mutated_batch,starts=None,pos=None):
+        uniprots=mutated_batch['UniProt']
+        mutants=mutated_batch['seq']
+        locs=mutated_batch['Loc']
+        mutant_lens=[len(seq) for seq in mutants]
+        seqs=[get_sequence_from_uniprot_id(uniprot) for uniprot in uniprots]
+        batch_sample=[]
+        lens=[]
+        for i,seq in enumerate(seqs):
+            if starts[i]==0: #no random cropping
+                # print('this seq is not cropped as the length is %s, starts[i] is %s'%(len(seq),starts[i]))
+                lens.append(mutant_lens[i])
+                batch_sample.append((locs[i],seq[:mutant_lens[i]])) #the wild seq has to be of same length as the mutant
+
+            elif starts[i] is not None: #if mutated sequences are cropped and a start is returned
+                seq=seq[starts[i]:starts[i]+self.crop_len]
+                batch_sample.append((locs[i],seq))
+                lens.append(len(seq))
+
+            elif starts[i] is None and len(seq)>self.crop_len: # if mutated seq is not cropped but the wild is too long
+                seq,_=self.center_crop(seq,pos[i])
+                batch_sample.append((locs[i],seq))
+                lens.append(len(seq))
+            else:
+                batch_sample.append((locs[i],seq))
+                lens.append(len(seq))
+        # print('\n length of wild batch is %s'%lens)
+        return batch_sample
     def center_crop(self,seq,pos):
         left_half=self.crop_len//2
         right_half=self.crop_len-left_half
@@ -389,9 +428,12 @@ class Esm_cls_token(plClassificationBaseModel):
         return seqs_after,starts,positions
 
         
-    def get_esm_embedings(self,batch_sample):
+    def get_esm_embedings(self,batch_sample,starts):
         torch.cuda.empty_cache()
         locs, _, batch_tokens=self.batch_converter(batch_sample)
+        for i in range(len(locs)):
+            if starts[i]:
+                locs[i]=int(locs[i])-int(starts[i])
         batch_tokens=batch_tokens.to(self.device)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
         results = self.esm_model(batch_tokens, repr_layers=[self.repr_layers], return_contacts=False)

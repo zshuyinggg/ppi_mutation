@@ -12,7 +12,7 @@ data_init:
 
 gnn_init:
     gnn_type: gcn
-    esm_dim: 5760
+    b0_dim: 5760
     dim_reduction: 64
     num_gnn_layers: 3
     lr: 0.0001

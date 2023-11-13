@@ -29,7 +29,7 @@ import argparse
 
 pj=os.path.join
 parser = argparse.ArgumentParser()
-parser.add_argument('--config_file', type=str, help='',default="gcn7.yaml")
+parser.add_argument('--config_file', type=str, help='',default="gcn10.yaml")
 args = parser.parse_args()
 
 
@@ -41,6 +41,7 @@ if __name__ == '__main__':
 
     variantPPI=VariantPPIModule(**config['data_init'])
     if config.get('test'):gcn=GNN(**config['gnn_init']).load_from_checkpoint(config['ckpt'],**config['gnn_init'])
+    elif config.get('freeze'):gcn=GNN(**config['gnn_init']).load_from_checkpoint(config['ckpt_freeze'],**config['gnn_init'])
     else:gcn=GNN(**config['gnn_init'])
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=10, verbose=True, mode="min")
     logger=TensorBoardLogger(os.path.join(logging_path,'baseline1'),name="%s_seed1050"%args.config_file)

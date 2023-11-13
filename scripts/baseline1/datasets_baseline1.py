@@ -85,8 +85,9 @@ class VariantPPI(Dataset):
             print(name,flush=True)
         
         index_variant=self.dic_uniprot2idx[variant_uniprot]
-        ppi_with_variant_embeddings=torch.vstack([self.dic_index2wild_embeddings[i] if i!=index_variant else variant_embeddings for i in range(len(self.dic_index2wild_embeddings))])
-        data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.edge_index,y=[variant_label],num_nodes=self.num_nodes)
+        # ppi_with_variant_embeddings=torch.vstack([self.dic_index2wild_embeddings[i] if i!=index_variant else variant_embeddings for i in range(len(self.dic_index2wild_embeddings))])
+        ppi_without_variant_embeddings=torch.vstack([self.dic_index2wild_embeddings[i] for i in range(len(self.dic_index2wild_embeddings)) if i !=index_variant])
+        data = Data(x=(ppi_without_variant_embeddings,variant_embeddings,index_variant),edge_index=self.edge_index,y=[variant_label],num_nodes=self.num_nodes)
         # data = Data(x=(ppi_with_variant_embeddings,variant_embeddings,index_variant),edge_index=self.adj,y=[variant_label],num_nodes=self.num_nodes)
         return data
 
