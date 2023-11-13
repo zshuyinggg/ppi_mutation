@@ -66,10 +66,9 @@ def mp_func_ppi(df):
     for i in range(df.shape[0]):
         print('pid: %s, working on %s'%(os.getpid(),i),flush=True)
         for j in range(df.shape[1]):
-            if j%20==0:print('pid: %s,  %.2f done'%(os.getpid(),j/df.shape[1]),flush=True)
             df.iloc[i,j]=sequence_indentity(uniprot_seq_dict[df.index[i]],uniprot_seq_dict[df.columns[j]])
+            if j%20==0:print('pid: %s,  %.2f done'%(os.getpid(),j/df.shape[1]),flush=True)
     return df
-
 if __name__ == '__main__':
 
     import pandas as pd
@@ -79,9 +78,9 @@ if __name__ == '__main__':
     )
     with open('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_test_name_list_1050.txt','r') as f:
         test_list=eval(f.readline())
-    with open('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_train_name_list_1050.txt','r') as f:
+    with open('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_train_name_list_manual1.txt','r') as f:
         train_list=eval(f.readline())
-    with open('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_val_name_list_1050.txt','r') as f:
+    with open('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_val_name_list_manual1.txt','r') as f:
         val_list=eval(f.readline())
     train_val=pd.read_csv('/scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_1_no_error.csv')
 
@@ -94,13 +93,15 @@ if __name__ == '__main__':
     unseen_test_uniprot=test_uniprot-train_uniprot-val_uniprot
     seq_sim_train_test=pd.DataFrame(index=list(train_uniprot),columns=list(unseen_test_uniprot))
     seq_sim_train_val=pd.DataFrame(index=list(train_uniprot),columns=list(val_uniprot))
+
+
     #train_vel
     chunk_size_ppi = int(seq_sim_train_val.shape[0]/num_processes)
     chunks_ppi = [seq_sim_train_val.iloc[i:i + chunk_size_ppi,:] for i in range(0, seq_sim_train_val.shape[0], chunk_size_ppi)]
     pool = multiprocessing.Pool(processes=num_processes)
     result =pool.map(mp_func_ppi, chunks_ppi)
     f_final_ppi=pd.concat(result,sort=False)
-    f_final_ppi.to_csv('seq_sim_train_val.csv')
+    f_final_ppi.to_csv('seq_sim_train_val_manual1.csv')
 
     # train_test
     chunk_size_ppi = int(seq_sim_train_test.shape[0]/num_processes)
@@ -108,6 +109,6 @@ if __name__ == '__main__':
     pool = multiprocessing.Pool(processes=num_processes)
     result =pool.map(mp_func_ppi, chunks_ppi)
     f_final_ppi=pd.concat(result,sort=False)
-    f_final_ppi.to_csv('seq_sim_train_test.csv')
+    f_final_ppi.to_csv('seq_sim_train_test_manual1.csv')
     print('train_test done')
 

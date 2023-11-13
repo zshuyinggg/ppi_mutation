@@ -32,7 +32,7 @@ def find_current_path():
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
 from scripts.utils import *
-from torch_geometric.nn import GATConv, GINEConv, GCNConv,SAGEConv
+from torch_geometric.nn import GATConv, GINConv, GCNConv,SAGEConv
 
 class MLP(nn.Module):
     def __init__(self, layer_num, hidden_dim):
@@ -133,7 +133,7 @@ def define_act(f_act):
         return f
     else:return f_act #TODO 
 class GNN(plClassificationBaseModel):
-    def __init__(self, gnn_type, variant_initial_dim, wild_initial_dim, node_input_dim,num_gnn_layers,freeze=False,residual_strategy='mean',dim_reduction=False,dropout=0,f_act='relu', gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,load_ckpt_before_training=None,**args):
+    def __init__(self, gnn_type, variant_initial_dim, variant_hidden_dim,wild_initial_dim, node_input_dim,num_gnn_layers,freeze=False,residual_strategy='mean',dim_reduction=False,dropout=0,f_act='relu', gat_attn_head=2,gin_mlp_layer=2, lr=1e-4, sampler=False,layers_dims=None,layer_norm=False,load_ckpt_before_training=None,**args):
         f_act=define_act(f_act)
         if residual_strategy == 'mean': dim2clf,layernorm1_dim=node_input_dim+variant_initial_dim, node_input_dim
         elif residual_strategy == 'stack' : dim2clf,layernorm1_dim = (num_gnn_layers+1)*node_input_dim+variant_initial_dim,node_input_dim*(num_gnn_layers+1)
@@ -144,8 +144,8 @@ class GNN(plClassificationBaseModel):
         if variant_initial_dim!=node_input_dim:
             if dim_reduction=='linear':
                 self.variantDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(variant_initial_dim,node_input_dim))
-            else:
-                self.variantDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(variant_initial_dim,variant_initial_dim//2),f_act,nn.Dropout(dropout),nn.Linear(variant_initial_dim//2,node_input_dim))
+            else:#TODO
+                self.variantDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(variant_initial_dim,variant_hidden_dim),f_act,nn.Dropout(dropout),nn.Linear(variant_hidden_dim,node_input_dim))
         if wild_initial_dim!=node_input_dim:
             if dim_reduction=='linear':     
                 self.wildDimReduction=nn.Sequential(nn.Dropout(dropout),nn.Linear(wild_initial_dim,node_input_dim))
@@ -159,7 +159,7 @@ class GNN(plClassificationBaseModel):
                                                                     for i in range(num_gnn_layers)] )
         elif gnn_type=='gcn':self.gnnconv_list=nn.ModuleList( [GCNConv(in_channels=node_input_dim,out_channels=node_input_dim)
                                                                     for _ in range(num_gnn_layers)] )
-        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINEConv(MLP(gin_mlp_layer, node_input_dim),edge_dim=1)
+        elif gnn_type == 'gin': self.gnnconv_list = nn.ModuleList( [GINConv(MLP(gin_mlp_layer, node_input_dim),edge_dim=1)
                                                                     for _ in range(num_gnn_layers)] )
         
         self.node_input_dim=node_input_dim
