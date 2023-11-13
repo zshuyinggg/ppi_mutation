@@ -30,8 +30,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 from scripts.utils import *
-from scripts.myesm.model import *
-from scripts.myesm.datasets import *
+from scripts.baseline0.model import *
+from scripts.baseline0.datasets import *
 import pandas as pd
 
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     proData.trainer=trainer
     trainer.fit(myesm,datamodule=proData) #need to use this to reload
 
-    # trainer.fit(model=myesm,train_dataloaders=proData.train_dataloader(),val_dataloaders=proData.val_dataloader())
+    # trainer.fit(model=baseline0,train_dataloaders=proData.train_dataloader(),val_dataloaders=proData.val_dataloader())
     #this does not reload because proData.train_dataloader( )returned a object and train_loaders just repeat call this object (not method)
-    # trainer.fit(model=myesm,datamodule=proData)
+    # trainer.fit(model=baseline0,datamodule=proData)
 

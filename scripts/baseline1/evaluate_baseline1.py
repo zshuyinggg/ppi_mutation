@@ -22,7 +22,7 @@ script_path, data_path, logging_path= os.path.join(top_path,'scripts'),\
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 torch.set_float32_matmul_precision('medium')
 from scripts.utils import *
-from scripts.myesm.model import *
+from scripts.baseline0.model import *
 from scripts.baseline1.datasets_baseline1 import *
 from scripts.baseline1.baseline1_models import *
 import argparse 

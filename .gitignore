@@ -33,3 +33,4 @@
 
 /scripts/*core*
 core.*
+/venv/*

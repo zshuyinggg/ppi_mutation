@@ -37,8 +37,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 torch.set_float32_matmul_precision('medium')
 # os.environ["CUDA_LAUNCH_BLOCKING"]="1"
 from scripts.utils import *
-from scripts.myesm.model import *
-from scripts.myesm.datasets import *
+from scripts.baseline0.model import *
+from scripts.baseline0.datasets import *
 import pandas as pd
 
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     seed_everything(args.seed, workers=True)
     bs=20
     proData=ProteinDataModule(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_1_no_error.csv'),crop_val=True, train_val_ratio=0.8,low=None,medium=None,high=None,veryhigh=None,discard=False,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= bs,bs_medium=bs,bs_long=bs,mix_val=True,train_mix=True,random_seed=args.seed)
-#     myesm=Esm_finetune_delta(esm_model=eval("esm.pretrained.%s()"%esm_model),crop_val=True,esm_model_dim=args.esm_dim,crop_mode='center',n_class=2,repr_layers=args.esm_layers,unfreeze_n_layers=unfreeze_layers,lr=bs*num_devices*num_nodes*1e-6,crop_len=512,which_embds=args.which_embds,debug=False,balanced_loss=False,local_range=5)
+#     baseline0=Esm_finetune_delta(esm_model=eval("esm.pretrained.%s()"%esm_model),crop_val=True,esm_model_dim=args.esm_dim,crop_mode='center',n_class=2,repr_layers=args.esm_layers,unfreeze_n_layers=unfreeze_layers,lr=bs*num_devices*num_nodes*1e-6,crop_len=512,which_embds=args.which_embds,debug=False,balanced_loss=False,local_range=5)
 #     logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp','2019'),name="%s"%esm_model,version='%s_seed_%d_trainval0.8_lr1-06_whichembds=%s_unfreeze_6_center_train_mix_cropval_bs_20'%(args.version,args.seed,args.which_embds))
 #     checkpoint_callback = ModelCheckpoint(
 #     save_top_k=1,
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 #                         #    reload_dataloaders_every_n_epochs=1)
         
 #     trainer.datamodule=proData
-#     trainer.fit(myesm,datamodule=proData) #need to use this to reload
-#     # trainer.validate(myesm,datamodule=proData) #need to use this to reload
+#     trainer.fit(baseline0,datamodule=proData) #need to use this to reload
+#     # trainer.validate(baseline0,datamodule=proData) #need to use this to reload
 
 

@@ -37,8 +37,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 torch.set_float32_matmul_precision('medium')
 # os.environ["CUDA_LAUNCH_BLOCKING"]="1"
 from scripts.utils import *
-from scripts.myesm.model import *
-from scripts.myesm.datasets import *
+from scripts.baseline0.model import *
+from scripts.baseline0.datasets import *
 import pandas as pd
 from scripts.baseline1.baseline1_models import ESM_pretrained
 
@@ -89,6 +89,6 @@ if __name__ == '__main__':
                         plugins=[SLURMEnvironment(auto_requeue=False)])
         
     trainer.datamodule=proData
-    # trainer.test(model=myesm,datamodule=test_data,ckpt_path=ckpt)
+    # trainer.test(model=baseline0,datamodule=test_data,ckpt_path=ckpt)
     trainer.validate(model=myesm,datamodule=proData)
 

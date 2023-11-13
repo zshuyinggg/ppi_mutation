@@ -29,9 +29,9 @@ script_path, data_path, logging_path= os.path.join(top_path,'scripts'), \
  os.path.join(top_path,'data'), \
  os.path.join(top_path,'logs')
 from scripts.utils import *
-from scripts.myesm.model import *
+from scripts.baseline0.model import *
 from lightning.pytorch.loggers import TensorBoardLogger
-from scripts.myesm.datasets import *
+from scripts.baseline0.datasets import *
 import pandas as pd
 if __name__ == '__main__':
   logger=TensorBoardLogger(os.path.join(logging_path,'esm_mlp_tb_logs'),name="esm_mlp_noval",version='640160hidden2bz')

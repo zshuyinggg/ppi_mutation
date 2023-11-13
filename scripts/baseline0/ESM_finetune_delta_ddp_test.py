@@ -37,8 +37,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 torch.set_float32_matmul_precision('medium')
 # os.environ["CUDA_LAUNCH_BLOCKING"]="1"
 from scripts.utils import *
-from scripts.myesm.model import *
-from scripts.myesm.datasets import *
+from scripts.baseline0.model import *
+from scripts.baseline0.datasets import *
 import pandas as pd
 
 
@@ -51,12 +51,13 @@ parser.add_argument('--test', type=int, default=0,help='1 if true; 0 if false')
 parser.add_argument('--numnodes', type=int, default=1,help='')
 parser.add_argument('--numdevices', type=int,default=1, help='')
 parser.add_argument('--unfreeze', type=int,default=6, help='')
-parser.add_argument('--esm_dim', type=int,default=640, help='')
+parser.add_argument('--esm_dim', type=int,default=6, help='')
 parser.add_argument('--esm_layers', type=int,default=6, help='')
 parser.add_argument('--esm', type=str, help='',default="esm2_t30_150M_UR50D")
-parser.add_argument('--which_embds', type=str, default='0134',help="0:delta,1:wild,2:variant,3:local,4:AA")
+parser.add_argument('--which_embds', type=str, default='01',help="0:delta,1:wild,2:variant,3:local,4:AA,5:multiscale")
 parser.add_argument('--seed', type=int, default=42,help="random seed")
-parser.add_argument('--version', type=str, default='debug',help="debug")
+parser.add_argument('--version', type=str, default=42,help="version number")
+parser.add_argument('--ckpt', type=str, default=42,help="ckpt path")
 
 args = parser.parse_args()
 
@@ -66,20 +67,31 @@ unfreeze_layers=args.unfreeze
 esm_model=args.esm
 
 pj=os.path.join
+ckpt=args.ckpt
 if __name__ == '__main__':
     seed_everything(args.seed, workers=True)
     bs=20
-    proData=ProteinDataModule(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_1_no_error.csv'),crop_val=True, train_val_ratio=0.8,low=None,medium=None,high=None,veryhigh=None,discard=False,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= bs,bs_medium=bs,bs_long=bs,mix_val=True,train_mix=True,random_seed=args.seed)
+    proData=AllProteinData(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_1_no_error.csv'),batch_size=20,num_workers=20)
 
     test_data=ProteinDataModule(test=True,clinvar_csv=pj(data_path,'clinvar/mutant_seq_2019_test_no_error.csv'),crop_val=True,train_val_ratio=0.000001,low=None,medium=None,high=None,veryhigh=None,discard=False,num_devices=num_devices,num_nodes=num_nodes,delta=True,bs_short= 2,bs_medium=2,bs_long=2,mix_val=True,train_mix=True,random_seed=args.seed)
-    myesm=Esm_delta_multiscale_weight(num_bins=8,bin_one_side_distance=[0,2,4,8,16,32,128,256],esm_model=eval("esm.pretrained.%s()"%esm_model),esm_model_dim=args.esm_dim,repr_layers=args.esm_layers,unfreeze_n_layers=unfreeze_layers,lr=bs*num_devices*num_nodes*1e-6)
-    logger=TensorBoardLogger(os.path.join(logging_path,'esm_finetune_delta_ddp','2019'),name="%s"%esm_model,version='%s_%s'%(args.version,args.seed))
+    myesm=Esm_finetune_delta(which_embds=args.which_embds).load_from_checkpoint(ckpt,which_embds=args.which_embds)
+
 
     trainer=pl.Trainer(max_epochs=200, 
-                    logger=logger,
+                    logger=logger,devices=num_devices, 
+                    num_nodes=num_nodes, 
+                    strategy=DDPStrategy(find_unused_parameters=True), 
                     accelerator="gpu",
                     default_root_dir=logging_path, 
-                    reload_dataloaders_every_n_epochs=1)
-    trainer.datamodule=proData
-    trainer.fit(model=myesm,datamodule=proData)
+                    plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
+
+    # trainer.callbacks[0].best_score=0
+    trainer.validate(myesm,datamodule=proData,ckpt_path=ckpt) #need to use this to reload
+    trainer.datamodule=test_data
+
+    trainer.test(myesm,datamodule=test_data,ckpt_path=ckpt) #need to use this to reload
+
+    # trainer.fit(model=baseline0,train_dataloaders=proData.train_dataloader(),val_dataloaders=proData.val_dataloader())
+    #this does not reload because proData.train_dataloader( )returned a object and train_loaders just repeat call this object (not method)
+    # trainer.fit(model=baseline0,datamodule=proData)
 

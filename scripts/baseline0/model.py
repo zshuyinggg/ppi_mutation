@@ -34,7 +34,7 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 top_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(find_current_path()))))
 sys.path.append(top_path)
 from scripts.utils import *
-from scripts.myesm.datasets import ProteinSequence
+from scripts.baseline0.datasets import ProteinSequence
 
 
 
