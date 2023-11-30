@@ -1,0 +1,25 @@
+variant_only: False
+
+
+clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_1_no_error.csv
+train_val_ratio: 0.8
+random_seed: 1050
+num_workers: 10
+batch_size: 20
+write_list: True
+write_train_name_list_name: 2019_train_name_list_add_wild
+write_val_name_list_name: 2019_val_name_list_add_wild
+
+
+
+esm_model: esm.pretrained.esm2_t6_8M_UR50D()
+dropout: 0.1
+in_dim_clf: 320
+repr_layers: 6
+lr: 0.0004
+crop_len: 1024
+seed: 1050
+embedding_to_clf: ['variant']
+
+num_devices: 1
+num_nodes: 1

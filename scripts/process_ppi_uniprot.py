@@ -22,7 +22,7 @@ def mp_func_ppi(df):
 
 if __name__ == '__main__':
     all_ppi_uniprot_ids = list(eval(open('/scratch/user/zshuying/ppi_mutation/data/single_protein_seq/uniprotids_humap_huri.txt').readline()))
-    df_ppi=pd.DataFrame(columns=['UniProt','seq'],dtype=object)
+    df_ppi=pd.DataFrame(columns=['UniProt','Seq'],dtype=object)
     df_ppi['UniProt']=all_ppi_uniprot_ids
 
     chunk_size_ppi = int(df_ppi.shape[0]/num_processes)

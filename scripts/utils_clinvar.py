@@ -112,9 +112,9 @@ class MultiProcessUniProt():
         tqdm_text = "#" + "{}".format(pid).zfill(3)
         with tqdm(total=len(self.df), desc=tqdm_text, position=pid+1) as pbar:
             for i,idx in enumerate(self.df.index): 
-                self.df.loc[idx,'seq']=get_sequence_from_uniprot_id_cached(self.df.loc[idx,'UniProt'])
+                self.df.loc[idx,'Seq']=get_sequence_from_uniprot_id_cached(self.df.loc[idx,'UniProt'])
                 pbar.update(1)
-        self.df=self.df[self.df['seq'].notna()]
+        self.df=self.df[self.df['Seq'].notna()]
         return self.df
     
 

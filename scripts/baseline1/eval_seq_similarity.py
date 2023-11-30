@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     import pandas as pd
     uniprot_seq=pd.read_csv('/scratch/user/zshuying/ppi_mutation/ppi_seq_huri_humap.csv')
-    uniprot_seq_dict=dict(map(lambda i,j : (i,j) , uniprot_seq['UniProt'].tolist(),uniprot_seq['seq'].tolist()))
+    uniprot_seq_dict=dict(map(lambda i,j : (i,j) , uniprot_seq['UniProt'].tolist(),uniprot_seq['Seq'].tolist()))
     test_set=pd.read_csv('/scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv'
     )
     with open('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed/2019_test_name_list_1050.txt','r') as f:

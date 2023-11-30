@@ -1507,6 +1507,6 @@ def run_embed(model_type: str,
                         # avgpool across the sequence
                         arrays['avg'] = seqembed.mean(0)
                     else:
-                        arrays['seq'] = seqembed
+                        arrays['Seq'] = seqembed
                     to_save = {protein_id: arrays}
                     npzfile.savez(**to_save)
