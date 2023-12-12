@@ -44,9 +44,15 @@ num_partitions = 28
 
 
 def all_uniprot(f_path=pj(top_path, 'ppi_seq_huri_humap.csv')):
-    uniprots, seqs = pd.read_csv(f_path)['UniProt'].unique().tolist(), pd.read_csv(f_path)['Seq'].tolist()
-    return uniprots, seqs
+    seq_file=pd.read_csv(f_path)
+    with open(pj(top_path,'ppi_huri_humap.txt'),'r') as f:
+        ppi=eval(f.readline())
+    uniprots_ppi=set([item.split('-')[0] for item in ppi]).union(set([item.split('-')[1] for item in ppi]))
+    seq_ppi=seq_file[seq_file['UniProt'].apply(lambda x: x in uniprots_ppi)]
 
+    uniprots, seqs = seq_file['UniProt'].tolist(), seq_file['Seq'].tolist()
+    return uniprots, seqs
+#TODO not just PPI wild. all human wild.
 
 class ProteinEmbeddings(Dataset):
     def __init__(self, embedding_path, clinvar_csv) -> None:
@@ -78,7 +84,8 @@ class ProteinSequence(Dataset):
     def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'),
                  transform=None,
                  random_seed=52,
-                 variant_only=True, wild_uniprots_list_2_include=[]):
+                 variant_only=True,
+                 verbose=True):
         """
         labels: 2 wild. 0 negative. 1 possitive
         :param clinvar_csv:
@@ -94,31 +101,36 @@ class ProteinSequence(Dataset):
         np.random.seed(random_seed)
 
         self.all_sequences = self.all_sequences.sample(frac=1, random_state=random_seed).reset_index(drop=True)
+        if verbose:print(self.all_sequences.shape)
         # set this to class property to make sure train and val are split on the same indexes
         self.all_sequences.loc[
             self.all_sequences['Name'] == '0', 'Label'] = 0
         self.all_sequences.loc[self.all_sequences['Label'] == -1, 'Label'] = 0
-        print('!!!!========= \n Initial data to use: \n=========================',
-              self.all_sequences['Label'].value_counts())
+        if verbose:
+            print('!!!!========= \n Initial data to use: \n=========================',
+                  self.all_sequences['Label'].value_counts())
 
         if variant_only:
             self.all_sequences = self.all_sequences[self.all_sequences['Name'] != '0']
             torch.manual_seed(random_seed)
             np.random.seed(random_seed)
             self.all_sequences = self.all_sequences.sample(frac=1, random_state=random_seed).reset_index(drop=True)
-            print('!!!!====Wild type is not included!!!! ========= \n Final data to use: \n',
+            if verbose:
+                print('!!!!====Wild type is not included!!!! ========= \n Final data to use: \n',
                   self.all_sequences['Label'].value_counts())
 
         else:  # include all wild from ppi
             self.all_wild_uniprots, all_wild_seqs = all_uniprot()
             self.wild_df = pd.DataFrame(columns=['idx', 'Seq', 'label', 'UniProt', 'Name'])
             self.wild_df['UniProt'] = self.all_wild_uniprots
-            self.wild_df['Name'] = 'wild_' + self.wild_df['UniProt'] + 'p.%d' % (
-                    len(self.wild_df['Seq']) // 2)
+            self.wild_df['Seq']=all_wild_seqs
+            self.wild_df['Len']=self.wild_df['Seq'].str.len()//2
+            print(self.wild_df['Len'])
+            self.wild_df['Name'] = 'wild_' + self.wild_df['UniProt'] +'p.'+ self.wild_df['Len'].astype(str)
             self.wild_df['Label'] = 0
             self.all_sequences = pd.concat([self.all_sequences, self.wild_df])
             self.all_sequences = self.all_sequences.sample(frac=1, random_state=random_seed).reset_index(drop=True)
-            print('!!!!====Wild type is included!!!! ========= \n Final data to use: \n',
+            if verbose:print('!!!!====Wild type is included!!!! ========= \n Final data to use: \n',
                   self.all_sequences['Label'].value_counts())
 
     def get_idx_from_uniprot(self, uniprot):
@@ -151,7 +163,7 @@ class ProteinSequence(Dataset):
         labels = self.all_sequences.iloc[idx, self.all_sequences.columns.get_loc('Label')]
         sample = {'idx': torch.tensor(idx).float(), 'Seq': sequences, 'label': torch.tensor(labels).int(),
                   'UniProt': uniprot, 'Name': name,
-                  'Loc': get_loc_from_name(name)}  # multiple or single?
+                  'Loc': torch.tensor(get_loc_from_name(name))}  # multiple or single?
         if self.transform:
             sample = self.transform(sample)
         return sample
@@ -187,8 +199,7 @@ def read_name_list(list_name):
     return name_list
 
 
-def get_subset_clinvar_by_name_list(df, list_name):
-    name_list = read_name_list(list_name)
+def get_subset_clinvar_by_name_list(df, name_list):
     subdf = df[df['Name'].apply(lambda x: x in name_list)]
     return subdf
 
@@ -206,7 +217,11 @@ class ProteinDataModule(pl.LightningDataModule):
                  batch_size=4, write_list=False, write_train_name_list_name='2019_train_name_list',
                  write_val_name_list_name='2019_val_name_list', **args):
         super().__init__()
-        self.dataset = ProteinSequence(clinvar_csv=clinvar_csv, variant_only=variant_only, random_seed=random_seed)
+        if read_variant_from_list_file or read_variant_n_wild_from_list_file:
+            self.dataset = ProteinSequence(clinvar_csv=clinvar_csv, variant_only=variant_only, random_seed=random_seed,verbose=False)
+        else:
+            self.dataset = ProteinSequence(clinvar_csv=clinvar_csv, variant_only=variant_only, random_seed=random_seed,verbose=True)
+
         self.logger = logger
         self.seed = random_seed
 
@@ -214,11 +229,10 @@ class ProteinDataModule(pl.LightningDataModule):
             assert variant_only == False, "you set 'read_variant_n_wild_from_list_file' to True but 'variant_only' True too. which do you want?"
             train_set = get_subset_clinvar_by_name_list(self.dataset.all_sequences, variant_n_wild_train_list_name)
             val_set = get_subset_clinvar_by_name_list(self.dataset.all_sequences, variant_n_wild_val_list_name)
-
-            self.logger.experiment.add_text('Data and Model Setups',
-                                            'training set is read from the list %s\n validation set is read from the list %s\n' % (
-                                                variant_n_wild_train_list_name, variant_n_wild_val_list_name),
-                                            global_step=0)
+            print(self.dataset.all_sequences.Label.value_counts())
+            self.log_set_up('training set is read from the list %s\n validation set is read from the list %s\n' % (
+                                                variant_n_wild_train_list_name, variant_n_wild_val_list_name))
+            self.log_set_up(str(self.dataset.all_sequences.Label.value_counts()))
         elif read_variant_from_list_file:
             variant_train_list = read_name_list(variant_train_list_name)
             variant_val_list = read_name_list(variant_val_list_name)
@@ -228,6 +242,8 @@ class ProteinDataModule(pl.LightningDataModule):
                 self.log_set_up('read variant from\n %s and %s\nNOT stacking wild sequences' % (
                     variant_train_list_name, variant_val_list_name))
 
+                self.log_set_up(str(self.dataset.all_sequences.Label.value_counts()))
+
             else:
                 wild_train_list, wild_val_list = self.gen_wild_train_val_list(train_val_ratio)
                 train_set = get_subset_clinvar_by_name_list(self.dataset.all_sequences,
@@ -236,9 +252,10 @@ class ProteinDataModule(pl.LightningDataModule):
                                                           variant_val_list + wild_val_list)
                 self.log_set_up('read variant from\n %s and %s\nstack wild sequences to the data with ratio %s' % (
                     variant_train_list_name, variant_val_list_name, train_val_ratio))
+                self.log_set_up(str(self.dataset.all_sequences.Label.value_counts()))
 
         else:
-            self.log_set_up(
+            if logger:self.log_set_up(
                 'Splitting train val with ratio = %s, did not seperate training set with lengths' % train_val_ratio)
             train_set, val_set = split_train_val(self.dataset, train_val_ratio, random_seed=self.seed)
 
@@ -284,19 +301,19 @@ class AllProteinVariantData(ProteinDataModule):
     Subclass of ProteinSequence, without dividing train,val,test
     """
 
-    def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'), batch_size=20, num_workers=15):
-        super().__init__(clinvar_csv=clinvar_csv)
+    def __init__(self, clinvar_csv=os.path.join(script_path, 'merged_2019_1.csv'), batch_size=20, num_workers=15, variant_only=True,):
+        super().__init__(logger=None,variant_only=variant_only, train_val_ratio=0.0000000001, clinvar_csv=clinvar_csv)
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.dataset = ProteinSequence(clinvar_csv=clinvar_csv)
+        # self.dataset = ProteinSequence(clinvar_csv=clinvar_csv)
 
     def val_dataloader(self):
         return DataLoader(self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers,
-                          drop_last=True)
+                          drop_last=False)
 
     def test_dataloader(self):
         return DataLoader(self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers,
-                          drop_last=True)
+                          drop_last=False)
 
 
 class AllWildData(pl.LightningDataModule):

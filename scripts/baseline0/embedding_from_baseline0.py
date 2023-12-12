@@ -64,12 +64,12 @@ num_devices=args.numdevices
 num_nodes=args.numnodes
 unfreeze_layers=args.unfreeze
 esm_model=args.esm
-ckpt='/scratch/user/zshuying/ppi_mutation/logs/esm_finetune_delta_ddp/2019/esm2_t6_8M_UR50D/83001_1050_multiweight_grace1050_multiweight_8bins_-epoch=04-val_loss=0.42.ckpt'
+ckpt='/scratch/user/zshuying/ppi_mutation/logs/2022/esm_finetune_delta_ddp/2019/esm2_t6_8M_UR50D/83001_1050_multiweight_grace1050_multiweight_8bins_-epoch=04-val_loss=0.42.ckpt'
 pj=os.path.join
 if __name__ == '__main__':
     seed_everything(args.seed, workers=True)
     bs=20
-    proData=AllProteinVariantData(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_1_no_error.csv'),batch_size=20,num_workers=15)
+    # proData=AllProteinVariantData(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_1_no_error.csv'),batch_size=20,num_workers=15)
     test_data=AllProteinVariantData(clinvar_csv=pj(data_path,'clinvar','mutant_seq_2019_test_no_error.csv'),batch_size=20,num_workers=15)
 
 
@@ -86,7 +86,6 @@ if __name__ == '__main__':
 
     else:
         trainer=pl.Trainer(max_epochs=200, 
-                        
                         accelerator="gpu",
                         default_root_dir=logging_path, 
                         reload_dataloaders_every_n_epochs=2,

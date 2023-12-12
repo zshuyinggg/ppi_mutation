@@ -36,7 +36,6 @@ sys.path.append(top_path)
 
 
 
-
 class VariantPPI(Dataset):
     def __init__(self, root, variant_embedding_path, wild_embedding_path, transform=None, pre_transform=None,variant_list_name='2019_variant_name_list', pre_filter=None, **args):
         self.variant_embeddings=torch.load(variant_embedding_path)
@@ -117,8 +116,10 @@ class VariantPPI(Dataset):
         return
 
 
-def all_uniprot(f_path=pj(top_path,'ppi_seq_huri_humap.csv')):
-    uniprots=pd.read_csv(f_path)['UniProt'].unique().tolist()
+def all_uniprot(f_path=pj(top_path,'ppi_huri_humap.txt')):
+    with open(f_path,'r') as f:
+        uniprots=eval(f.readline())
+    # uniprots=pd.read_csv(f_path)['UniProt'].unique().tolist()
     dic_uniprot2idx=dict([(uniprots[i],i) for i in range(len(uniprots))])
     dic_idx2uniprot=dict([(i,uniprots[i]) for i in range(len(uniprots))])
     return uniprots, dic_uniprot2idx,dic_idx2uniprot
@@ -132,6 +133,44 @@ def split_train_val(dataset,train_val_split=0.8,random_seed=52):
     print('Split dataset into train, val with the rate of %s'%train_val_split)
     return train_set,valid_set
 
+
+class VariantPPI2FinetuneRandomWalk(Dataset):
+    def __init__(self, variant_list_name, overall_df):
+        super().__init__()
+        self.variant_sequences=pd.read_csv(overall_df)
+        self.wild_sequences=pd.read_csv(pj(top_path,'ppi_seq_huri_humap.csv'))
+        self.variant_name_list=read_variant_name_list_screen(variant_list_name)
+        uniprots, self.dic_uniprot2idx, self.dic_idx2uniprot = all_uniprot()
+        self.num_nodes=len(self.dic_uniprot2idx)
+
+    def len(self):
+        return len(self.variant_name_list)
+
+    def get_edge_index(self):
+        uniprots, dic_uniprot2idx, dic_idx2uniprot = all_uniprot()
+        self.dic_uniprot2idx, self.dic_idx2uniprot = dic_uniprot2idx, dic_idx2uniprot
+        with open(pj(top_path, 'ppi_huri_humap.txt'), 'r') as f:
+            interactions = eval(f.readline())
+        exclude_self = [item for item in interactions if '-' in item]
+        indexed_interactions_edges = [[dic_uniprot2idx[item.split('-')[0]], dic_uniprot2idx[item.split('-')[1]]] for
+                                      item in exclude_self]
+        indexed_interactions_edges_reverse = [[dic_uniprot2idx[item.split('-')[0]], dic_uniprot2idx[item.split('-')[1]]]
+                                              for item in exclude_self]
+        edge_index = torch.tensor(indexed_interactions_edges + indexed_interactions_edges_reverse, dtype=torch.long)
+        self.edge_index = edge_index.t().contiguous()
+        return
+
+
+    def get(self, idx):
+        name = self.variant_name_list[idx]
+        if 'wild' in name:
+            variant_uniprot=(name.split('p.')[0]).split('_')[1]
+            variant_seq=self.wild_sequences[self.wild_sequences.UniProt==variant_uniprot]['Seq']
+            variant_label=0
+
+        else:
+            tmp=self.variant_sequences['Name']==name
+            variant_seq,variant_uniprot,variant_label=self.variant_sequences[tmp]['Seq'],self.variant_sequences[tmp]['UniProt'],self.variant_sequences[tmp]['Label']
 
 class VariantPPIModule(pl.LightningDataModule):
     def __init__(self,root, train_val_variant_embedding_path, wild_embedding_path,batch_size,num_workers,\
@@ -160,6 +199,10 @@ class VariantPPIModule(pl.LightningDataModule):
     
     def test_dataloader(self) :
         return DataLoader(self.test_set,shuffle=False,batch_size=2*self.batch_size,num_workers=self.num_workers)
+
+
+
+
 
 class VariantRandomWalkLoader(NodeLoader):
     def __init__(data, node_sampler, input_nodes,filter_per_worker=True):
@@ -209,8 +252,7 @@ class VariantRandomWalkSampler(GraphSAINTRandomWalkSampler):
         return node_idx.view(-1)
     
 
-def read_variant_name_list_screen(emb_path,variant_list_name,uniprotdic):
-    embs=torch.load(emb_path)
+def read_variant_name_list_screen(variant_list_name):
     pth=pj('/scratch/user/zshuying/ppi_mutation/data/baseline1/processed','%s.txt'%variant_list_name)
     with open(pth,'r') as f:
         variant_name_list=eval(f.readline())

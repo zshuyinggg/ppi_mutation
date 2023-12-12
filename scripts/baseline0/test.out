@@ -1,0 +1,15 @@
+{'data_init': {'seed': 1050, 'clinvar_csv': '/scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_1_no_error.csv', 'train_val_ratio': 0.8, 'read_variant_from_list_file': True, 'variant_train_list_name': '2019_train_name_list_1050', 'variant_val_list_name': '2019_val_name_list_1050', 'variant_only': True, 'write_list': False, 'random_seed': 1050, 'num_workers': 8, 'batch_size': 20}, 'test_init': {'seed': 1050, 'clinvar_csv': '/scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv', 'train_val_ratio': 1e-06, 'read_variant_from_list_file': False, 'num_workers': 8, 'batch_size': 20, 'variant_only': True}, 'callback_args': {'save_top_k': 1, 'monitor': 'val_loss', 'min_delta': 0.0, 'patience': 10, 'verbose': 'Truese', 'mode': 'min'}, 'model_init': {'num_bins': 8, 'bin_one_side_distance': [0, 2, 4, 8, 16, 32, 128, 256], 'repr_layers': 6, 'unfreeze_n_layers': 6}, 'num_devices': 1, 'num_nodes': 1, 'lr_each': 1e-06, 'seed': 1050, 'test': True, 'ckpt': '/scratch/user/zshuying/ppi_mutation/logs/esm_finetune_delta_ddp/2019/esm2_t6_8M_UR50D/83001_1050_multiweight_grace1050_multiweight_8bins_-epoch=04-val_loss=0.42.ckpt'}
+Reading file
+nan removed
+!!!!========= 
+ Initial data to use: 
+========================= Label
+1    13902
+0     7706
+Name: count, dtype: int64
+!!!!====Wild type is not included!!!! ========= 
+ Final data to use: 
+ Label
+1    13902
+0     7706
+Name: count, dtype: int64

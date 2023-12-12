@@ -1,0 +1,6 @@
+--2023-12-06 03:42:26--  https://rest.uniprot.org/uniprotkb/stream?download=true
+Resolving rest.uniprot.org (rest.uniprot.org)... 193.62.193.81
+Connecting to rest.uniprot.org (rest.uniprot.org)|193.62.193.81|:443... connected.
+HTTP request sent, awaiting response... 400 
+2023-12-06 03:42:28 ERROR 400: (no description).
+

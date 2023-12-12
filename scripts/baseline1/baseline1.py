@@ -29,7 +29,7 @@ import argparse
 
 pj=os.path.join
 parser = argparse.ArgumentParser()
-parser.add_argument('--config_file', type=str, help='',default="gcn10.yaml")
+parser.add_argument('--config_file', type=str, help='',default="gcn14_test.yaml")
 args = parser.parse_args()
 
 
@@ -44,12 +44,12 @@ if __name__ == '__main__':
     elif config.get('freeze'):gcn=GNN(**config['gnn_init']).load_from_checkpoint(config['ckpt_freeze'],**config['gnn_init'])
     else:gcn=GNN(**config['gnn_init'])
     early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=10, verbose=True, mode="min")
-    logger=TensorBoardLogger(os.path.join(logging_path,'baseline1'),name="%s_seed1050"%args.config_file)
+    logger=TensorBoardLogger(os.path.join(logging_path,'Nov28','baseline1'),name="%s_seed1050"%args.config_file)
     checkpoint_callback = ModelCheckpoint(
     save_top_k=1,
     monitor="val_loss",
     mode="min",
-    dirpath=os.path.join(logging_path,'baseline1'),
+    dirpath=os.path.join(logging_path,'Nov28','baseline1'),
     filename='%s_seed1050_'%args.config_file+"-{epoch:02d}-{val_loss:.2f}",
 )
     if config['num_devices']>1:
@@ -64,14 +64,12 @@ if __name__ == '__main__':
                             plugins=[SLURMEnvironment(auto_requeue=False)],reload_dataloaders_every_n_epochs=1)
     else:
         trainer=pl.Trainer(max_epochs=200, 
-                        # logger=logger,
+                        logger=logger,
                         accelerator="gpu",
                         default_root_dir=logging_path, 
-                        # callbacks=[early_stop_callback],
                         reload_dataloaders_every_n_epochs=2,
                         plugins=[SLURMEnvironment(auto_requeue=False)])
-                        #    reload_dataloaders_every_n_epochs=1)
-        
+
     trainer.datamodule=variantPPI
 
     if not config.get('test'):trainer.fit(gcn,datamodule=variantPPI) 

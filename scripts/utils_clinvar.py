@@ -209,6 +209,8 @@ def get_uniprot_seq_from_refseq(refseqID):
 
 def get_loc_from_name(name):
     change=name.split('p.')[1]
+    if 'wild' in name:
+        return change
     obj=re.findall(r'[0-9]+',change)[0]
     return int(obj)-1 
 def modify(seq,hgvs):

@@ -1,15 +1,17 @@
 data_init:
-  seed: 1050
+  seed: 12
   clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_1_no_error.csv
   train_val_ratio: 0.8
-  read_variant_from_list_file: True
-  variant_train_list_name: 2019_train_name_list_1050
-  variant_val_list_name: 2019_val_name_list_1050
-  variant_only: True
-  write_list: False
-  random_seed: 1050
+  read_variant_from_list_file: False
+  read_variant_n_wild_from_list_file: False
+  write_train_name_list_name: 2019_train_name_list_add_wild
+  write_val_name_list_name: 2019_val_name_list_add_wild
+  variant_only: False
+  write_list: True
+  random_seed: 12
   num_workers: 8
   batch_size: 20
+
 
 
 callback_args:
@@ -17,7 +19,7 @@ callback_args:
   monitor: val_loss
   min_delta: 0.00
   patience: 10
-  verbose: Truese
+  verbose: True
   mode: min
 
 model_init:
@@ -25,8 +27,11 @@ model_init:
   bin_one_side_distance: [0, 2, 4, 8, 16, 32, 128, 256]
   repr_layers: 6
   unfreeze_n_layers: 6
+  esm_model_name: esm2_t6_8M_UR50D
+  esm_model_dim: 320
+
 
 num_devices: 1
 num_nodes: 1
 lr_each: 0.000001
-seed: 1050
+seed: 12

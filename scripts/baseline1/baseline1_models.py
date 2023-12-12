@@ -13,7 +13,7 @@ from torch import optim, nn, utils, Tensor
 import lightning.pytorch as pl
 import esm, re
 import torch.cuda as cuda
-from datasets_baseline1 import *
+from scripts.baseline1.datasets_baseline1 import *
 import torch.nn.functional as F
 
 from torchmetrics.classification import BinaryAUROC, MulticlassAUROC
@@ -150,6 +150,9 @@ def define_activation_function(input_f):
         raise ValueError("Invalid activation function name: " + input_f)
 
 
+
+
+
 class GNN(plClassificationBaseModel):
     def __init__(self, gnn_type, esm_dim, num_gnn_layers, dim2clf, b0_dim,hidden_dim_clf=[], pretrained_from_b0=True,
                  residual_strategy='mean', dim_reduction=False, dropout=0, f_act='relu', gat_attn_head=2,
@@ -203,9 +206,9 @@ class GNN(plClassificationBaseModel):
         elif gnn_type == 'gcn':
             self.gnnconv_list = nn.ModuleList([GCNConv(in_channels=self.node_dim, out_channels=self.node_dim)
                                                for _ in range(num_gnn_layers)])
-        elif gnn_type == 'gin':
-            self.gnnconv_list = nn.ModuleList([GINEConv(nn.Sequential(MLP(gin_mlp_layer, self.node_dim)))
-                                               for _ in range(num_gnn_layers)])
+        # elif gnn_type == 'gin':
+        #     self.gnnconv_list = nn.ModuleList([GINEConv(nn.Sequential(MLP(gin_mlp_layer, self.node_dim)))
+        #                                        for _ in range(num_gnn_layers)])
 
     def define_dim_reduction_modules(self):
         if self.dim_reduction:
@@ -397,3 +400,7 @@ class ESM_pretrained(pl.LightningModule):
         sequence_representations = torch.vstack(sequence_representations)
         del batch_lens, batch_tokens
         return sequence_representations
+
+
+
+class GNN2(GNN):

@@ -7,11 +7,9 @@ import math
 import requests
 import numpy as np
 from bs4 import BeautifulSoup as BS
-from loguru import logger
-
 import re
 import pandas as pd
-from Bio.SeqUtils import seq1
+# from Bio.SeqUtils import seq1
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn3, venn3_circles,venn3_unweighted
@@ -419,7 +417,6 @@ def modify(seq,hgvs):
 
 # from dask.diagnostics import ProgressBar
 # ProgressBar().register()
-@logger.catch
 def gen_mutant_one_row(uniprot_id, name):
     # print('getting sequence from uniprot_id %s'%uniprot_id)
     seq = get_sequence_from_uniprot_id(uniprot_id)

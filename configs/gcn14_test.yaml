@@ -9,6 +9,7 @@ data_init:
     train_val_ratio: 0.8
     test_clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv
     test_variant_embedding_path: /scratch/user/zshuying/ppi_mutation/data/baseline0/2019_test_variant_embds.pt
+    test_list_name: 2019_test_name_list
     train_list_name: 2019_train_name_list_1050
     val_list_name: 2019_val_name_list_1050
 gnn_init:

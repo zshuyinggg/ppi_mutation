@@ -11,6 +11,14 @@ data_init:
   num_workers: 8
   batch_size: 20
 
+test_init:
+  seed: 1050
+  clinvar_csv: /scratch/user/zshuying/ppi_mutation/data/clinvar/mutant_seq_2019_test_no_error.csv
+  train_val_ratio: 0.000001
+  read_variant_from_list_file: False
+  num_workers: 8
+  batch_size: 20
+  variant_only: True
 
 callback_args:
   save_top_k: 1
@@ -25,8 +33,13 @@ model_init:
   bin_one_side_distance: [0, 2, 4, 8, 16, 32, 128, 256]
   repr_layers: 6
   unfreeze_n_layers: 6
+  esm_model_name: esm2_t6_8M_UR50D
+  esm_model_dim: 320
+
 
 num_devices: 1
 num_nodes: 1
 lr_each: 0.000001
 seed: 1050
+test: True
+ckpt: /scratch/user/zshuying/ppi_mutation/logs/2022/esm_finetune_delta_ddp/2019/esm2_t6_8M_UR50D/83001_1050_multiweight_grace1050_multiweight_8bins_-epoch=04-val_loss=0.42.ckpt

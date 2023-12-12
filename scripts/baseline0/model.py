@@ -115,7 +115,9 @@ class Esm_finetune(pl.LightningModule):
         return seqs_after, starts, positions
 
     def get_pos_of_name(self, name):
+
         change = name.split('p.')[1]
+        if 'wild' in name: return int(change)
         obj = re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)', change)
         if obj is None:
             print('%s did not find match' % name)
@@ -556,7 +558,7 @@ class Esm_finetune_delta(Esm_finetune):
         self.batch_sample = batch_sample
         self.which_embds = which_embds
         self.local_range = local_range
-        self.init_dataset()
+        # self.init_dataset()
         self.auroc = BinaryAUROC()
         self.auprc = AveragePrecision(task='binary')
         self.embs_dim = self.get_embs_dim()
@@ -739,6 +741,7 @@ class Esm_finetune_delta(Esm_finetune):
                 doc + 'mutated_aa_embs;'
         if verbose: print(doc)
         return torch.hstack(l)
+
 
     def on_train_epoch_end(self):
         all_preds = torch.vstack(self.train_out)
@@ -999,7 +1002,7 @@ class Esm_finetune_delta(Esm_finetune):
 
 class Esm_delta_multiscale_weight(Esm_finetune_delta):
     def __init__(self, esm_model, esm_model_dim, repr_layers, lr, unfreeze_n_layers, num_bins=8,
-                 bin_one_side_distance=[0, 2, 4, 8, 16, 32, 128, 256], save_embeddings=False):
+                 bin_one_side_distance=[0, 2, 4, 8, 16, 32, 128, 256], save_embeddings=False,**kwargs):
         self.num_bins = num_bins
         super().__init__(esm_model=esm_model, esm_model_dim=esm_model_dim, repr_layers=repr_layers, lr=lr,
                          unfreeze_n_layers=unfreeze_n_layers)
@@ -1010,7 +1013,7 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
             nn.Softmax(dim=1)
         )
         self.batch_sample = 'random'
-        self.init_dataset()
+        # self.init_dataset()
         self.auroc = BinaryAUROC()
         self.auprc = AveragePrecision(task='binary')
 
@@ -1021,7 +1024,7 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         self.val_out = []
         self.test_out = []
         self.train_out = []
-
+        self.test_analysis=[]
         self.crop = self.center_crop
         self.crop_batch = self.center_crop_batch
         self.crop_val = True
@@ -1039,8 +1042,8 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         return starts, labels, locs, mutated_batch_samples, wild_batch_samples
 
     def get_embs_dim(self):
-        return (
-                           self.num_bins + 1) * self.esm_model_dim * 2  # sequence representation + bin_representations for both delta and wild
+        return (self.num_bins + 1) * self.esm_model_dim * 2  # sequence representation +
+        # bin_representations for both delta and wild
 
     def get_esm_embedings(self, batch_sample, starts=None):
         mutation_locs, _, batch_tokens = self.batch_converter(batch_sample)
@@ -1171,7 +1174,7 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
 
         loss = self.ce_loss(y, labels)
         self.test_out.append(torch.hstack([y, labels.reshape(len(labels), 1)]).cpu())
-
+        self.test_analysis.append([[batch['Name'],batch['UniProt'],y.cpu(), labels.reshape(len(labels), 1).cpu()]])
         del y, labels
 
         return loss
@@ -1188,6 +1191,9 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         if self.trainer.global_rank == 0:
             print('\n------gathered auroc is %s----\n' % test_auroc_gather, flush=True)
             print('\n------gathered auprc is %s----\n' % test_auprc_gather, flush=True)
+
+        with open(os.path.join(top_path,'test_results%s'%self.trainer.global_rank),'w+') as f:
+            f.writelines(str(self.test_analysis))
         del all_preds, test_auroc_gather, test_auprc_gather, test_loss
         self.test_out.clear()
 
