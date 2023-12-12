@@ -13,6 +13,7 @@ import lightning.pytorch as pl
 import esm
 import torch.cuda as cuda
 # from torch_geometric.nn import GATConv, GINEConv, GCNConv
+from torch.optim import Adam
 
 import torch.nn.functional as F
 import math
@@ -206,7 +207,7 @@ class Esm_finetune(pl.LightningModule):
         self.val_out.clear()
 
     def configure_optimizers(self, lr=None):
-        optimizer = optim.Adam(self.parameters(), lr=lr if lr else self.lr)
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr if lr else self.lr)
         return optimizer
 
     def train_mul_gpu(self, batch_tokens):
@@ -1071,7 +1072,7 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
                     i] else 0
                 l.append(torch.matmul(
                     self.Weights[j](range(weight_left_distance, 2 * one_side_len + 1 - weight_right_distance)).T,
-                    token_representations[i, left:right]))  # TODO: normalize weight
+                    token_representations[i, left:right]))
             bin_representations.append(torch.hstack(l))
             sequence_representations.append(token_representations[i, 1: batch_lens[i] - 1].mean(0))
 
@@ -1148,9 +1149,9 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         val_auroc_gather = self.auroc(all_preds_gather.float()[:, 1], all_preds_gather.long()[:, -1])
         val_auprc_gather = self.auprc(all_preds_gather.float()[:, 1], all_preds_gather.long()[:, -1])
         val_loss = self.ce_loss(all_preds[:, :-1], all_preds.long()[:, -1])
-        # self.log('val_loss',val_loss,sync_dist=True)
-        # self.log('val_auroc_gathered',val_auroc_gather)
-        # self.log('val_auprc_gathered',val_auprc_gather)
+        self.log('val_loss',val_loss,sync_dist=True)
+        self.log('val_auroc_gathered',val_auroc_gather)
+        self.log('val_auprc_gathered',val_auprc_gather)
         if self.trainer.global_rank == 0:
             print('\n------gathered auroc is %s----\n' % val_auroc_gather, flush=True)
             print('\n------gathered auprc is %s----\n' % val_auprc_gather, flush=True)
@@ -1191,9 +1192,9 @@ class Esm_delta_multiscale_weight(Esm_finetune_delta):
         if self.trainer.global_rank == 0:
             print('\n------gathered auroc is %s----\n' % test_auroc_gather, flush=True)
             print('\n------gathered auprc is %s----\n' % test_auprc_gather, flush=True)
-
-        with open(os.path.join(top_path,'test_results%s'%self.trainer.global_rank),'w+') as f:
-            f.writelines(str(self.test_analysis))
+        torch.save(self.test_analysis,os.path.join(top_path,'test_results%s'%self.trainer.global_rank))
+        # with open(os.path.join(top_path,'test_results%s'%self.trainer.global_rank),'w+') as f:
+        #     f.writelines(str(self.test_analysis))
         del all_preds, test_auroc_gather, test_auprc_gather, test_loss
         self.test_out.clear()
 

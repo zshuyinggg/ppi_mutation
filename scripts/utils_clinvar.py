@@ -217,21 +217,21 @@ def modify(seq,hgvs):
     #NP_000240.1:p.Ile219Val
     change=hgvs.split('p.')[1]
     obj=re.match(r'([a-zA-Z]+)([0-9]+)([a-zA-Z]+)',change)
-    if '=' in change: #NM_000238.4(KCNH2):c.1539C>T (p.Phe513_Gly514=)	
-        obj=re.match(r'([a-zA-Z]+)([0-9]+)',change.split('_')[0])
-        try:
-            ori,pos=obj.group(1),int(obj.group(2))
-            assert ori==seq[pos-1]
-        except:
-            new_seq='Error!! !!!' 
-            return new_seq
-        return seq[:pos-1]+seq[pos:]
-    elif obj is None:
+    assert '=' not in change #NM_000238.4(KCNH2):c.1539C>T (p.Phe513_Gly514=)	# THis should not be counted as missense
+        # obj=re.match(r'([a-zA-Z]+)([0-9]+)',change.split('_')[0])
+        # try:
+        #     ori,pos=obj.group(1),int(obj.group(2))
+        #     assert ori==seq[pos-1]
+        # except:
+        #     new_seq='Error!! !!!'
+        #     return new_seq
+        # return seq[:pos-1]+seq[pos:]
+    if obj is None:
         print('%s did not find match'%hgvs)
         new_seq='Error!! did not find match'
         return new_seq
     ori,pos,aft=obj.group(1),int(obj.group(2)),obj.group(3)
-    ori=seq1(ori)
+    ori=seq1(ori) #TODO check if this can count
     if ori == '*': seq=seq+'*' # if the changes is made to the terminator, then the seq does not have it, we have to add it first
     aft=seq1(aft) 
     try:assert ori==seq[pos-1]
@@ -245,7 +245,9 @@ def modify(seq,hgvs):
     except (AssertionError,IndexError):
         new_seq='Error!! Isoform is probably wrong!!!' #TODO: edit the code to deal with isoform
         return new_seq
-    if aft=='*': new_seq=new_seq.split('*')[0] #cut the seq according to terminator
+    # if aft=='*': new_seq=new_seq.split('*')[0] #cut the seq according to terminator
+    assert aft!='*' #this will be nonsense
+
     return new_seq
 
 

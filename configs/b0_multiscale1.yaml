@@ -9,7 +9,7 @@ data_init:
   variant_only: True
   write_list: True
   random_seed: 12
-  num_workers: 8
+  num_workers: 20
   batch_size: 20
 
 
@@ -33,5 +33,5 @@ model_init:
 
 num_devices: 2
 num_nodes: 8
-lr_each: 0.00000001
+lr_each: 0.000001
 seed: 12

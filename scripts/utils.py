@@ -17,8 +17,10 @@ import json
 import os, sys
 global top_path  # the path of the top_level directory
 global script_path, data_path, logging_path
+global REFDIC
 # from biotransformers import BioTransformers
 # add the top-level directory of this project to sys.path so that we can import modules without error
+import torch.utils.data as data
 
 top_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(top_path)
@@ -26,15 +28,110 @@ script_path, data_path, logging_path= os.path.join(top_path,'scripts'), \
     os.path.join(top_path,'data'), \
     os.path.join(top_path,'logs')
 CONFIG_PATH='/scratch/user/zshuying/ppi_mutation/configs'
+df=pd.read_csv(os.path.join(top_path,'ppi_seq_huri_humap.csv'))
+REFDIC=dict(map(lambda i,j : (i,j) , df['UniProt'].tolist(),df['Seq'].tolist()))
 import yaml
 
 def load_config(config_name):
     with open(os.path.join(CONFIG_PATH, config_name)) as file:
         config = yaml.safe_load(file)
     return config
+def plot_dists(val_dict, color="C0", xlabel=None, stat="count", use_kde=True):
+    columns = len(val_dict)
+    fig, ax = plt.subplots(1, columns, figsize=(columns * 3, 2.5))
+    fig_index = 0
+    for key in sorted(val_dict.keys()):
+        key_ax = ax[fig_index % columns]
+        sns.histplot(
+            val_dict[key],
+            ax=key_ax,
+            color=color,
+            bins=50,
+            stat=stat,
+            kde=use_kde and ((val_dict[key].max() - val_dict[key].min()) > 1e-8),
+        )  # Only plot kde if there is variance
+        hidden_dim_str = (
+            r"(%i $\to$ %i)" % (val_dict[key].shape[1], val_dict[key].shape[0]) if len(val_dict[key].shape) > 1 else ""
+        )
+        key_ax.set_title(f"{key} {hidden_dim_str}")
+        if xlabel is not None:
+            key_ax.set_xlabel(xlabel)
+        fig_index += 1
+    fig.subplots_adjust(wspace=0.4)
+    return fig
+def visualize_weight_distribution(model, color="C0"):
+    weights = {}
+    for name, param in model.named_parameters():
+        if name.endswith(".bias"):
+            continue
+        key_name = f"Layer {name.split('.')[1]}"
+        weights[key_name] = param.detach().view(-1).cpu().numpy()
+
+    # Plotting
+    fig = plot_dists(weights, color=color, xlabel="Weight vals")
+    fig.suptitle("Weight distribution", fontsize=14, y=1.05)
+    plt.show()
+    plt.close()
+
+def visualize_gradients(model, color="C0", print_variance=False):
+    """
+    Args:
+        net: Object of class BaseNetwork
+        color: Color in which we want to visualize the histogram (for easier separation of activation functions)
+    """
+    model.eval()
+    small_loader = data.DataLoader(train_set, batch_size=1024, shuffle=False)
+    imgs, labels = next(iter(small_loader))
+    imgs, labels = imgs.to(device), labels.to(device)
+
+    # Pass one batch through the network, and calculate the gradients for the weights
+    model.zero_grad()
+    preds = model(imgs)
+    loss = F.cross_entropy(preds, labels)  # Same as nn.CrossEntropyLoss, but as a function instead of module
+    loss.backward()
+    # We limit our visualization to the weight parameters and exclude the bias to reduce the number of plots
+    grads = {
+        name: params.grad.view(-1).cpu().clone().numpy()
+        for name, params in model.named_parameters()
+        if "weight" in name
+    }
+    model.zero_grad()
+
+    # Plotting
+    fig = plot_dists(grads, color=color, xlabel="Grad magnitude")
+    fig.suptitle("Gradient distribution", fontsize=14, y=1.05)
+    plt.show()
+    plt.close()
+
+    if print_variance:
+        for key in sorted(grads.keys()):
+            print(f"{key} - Variance: {np.var(grads[key])}")
 
 
+def visualize_activations(model, color="C0", print_variance=False):
+    model.eval()
+    small_loader = data.DataLoader(train_set, batch_size=1024, shuffle=False)
+    imgs, labels = next(iter(small_loader))
+    imgs, labels = imgs.to(device), labels.to(device)
 
+    # Pass one batch through the network, and calculate the gradients for the weights
+    feats = imgs.view(imgs.shape[0], -1)
+    activations = {}
+    with torch.no_grad():
+        for layer_index, layer in enumerate(model.layers):
+            feats = layer(feats)
+            if isinstance(layer, nn.Linear):
+                activations[f"Layer {layer_index}"] = feats.view(-1).detach().cpu().numpy()
+
+    # Plotting
+    fig = plot_dists(activations, color=color, stat="density", xlabel="Activation vals")
+    fig.suptitle("Activation distribution", fontsize=14, y=1.05)
+    plt.show()
+    plt.close()
+
+    if print_variance:
+        for key in sorted(activations.keys()):
+            print(f"{key} - Variance: {np.var(activations[key])}")
 def get_stringdb_id(data):
 #'../data/9606.protein.physical.links.detailed.v11.5.txt'
 
@@ -309,14 +406,15 @@ def get_sequence_from_uniprot_id_cached(id):
     return None
 
 def get_sequence_from_uniprot_id(id):
-    url='https://rest.uniprot.org/uniprotkb/%s.fasta'%id
-    contnt = requests.get(url).text
-    splt=contnt.split('\n')
-    seq=''.join(splt[1:])
-    if seq.isupper() and seq:
-        return seq
-    else: return None
-
+    # url='https://rest.uniprot.org/uniprotkb/%s.fasta'%id
+    # contnt = requests.get(url).text
+    # splt=contnt.split('\n')
+    # seq=''.join(splt[1:])
+    # if seq.isupper() and seq:
+    #     return seq
+    # else: return None
+    # df=pd.read_csv(os.path.join(top_path,'ppi_seq_huri_humap.csv'))
+    return REFDIC[id]
 
 def get_sequence_from_df(df):
     return [get_sequence_from_uniprot_id_cached(id) for id in df['UniProt']]

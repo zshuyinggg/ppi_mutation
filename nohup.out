@@ -1,0 +1,34 @@
+[I 23:45:46.873 NotebookApp] [nb_conda_kernels] enabled, 3 kernels found
+[I 23:45:48.511 NotebookApp] [nb_conda] enabled
+[I 23:45:48.640 NotebookApp] Serving notebooks from local directory: /scratch/user/zshuying/ppi_mutation
+[I 23:45:48.640 NotebookApp] Jupyter Notebook 6.5.4 is running at:
+[I 23:45:48.640 NotebookApp] http://localhost:8888/?token=628c04487d3ac15d80583a0021ed2f834bd0fedee74346e9
+[I 23:45:48.640 NotebookApp]  or http://127.0.0.1:8888/?token=628c04487d3ac15d80583a0021ed2f834bd0fedee74346e9
+[I 23:45:48.640 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 23:45:48.671 NotebookApp] 
+    
+    To access the notebook, open this file in a browser:
+        file:///home/zshuying/.local/share/jupyter/runtime/nbserver-188250-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:8888/?token=628c04487d3ac15d80583a0021ed2f834bd0fedee74346e9
+     or http://127.0.0.1:8888/?token=628c04487d3ac15d80583a0021ed2f834bd0fedee74346e9
+[W 23:46:02.554 NotebookApp] 400 GET /api/contents/notebooks/investigate_seq_embeddings.ipynb?type=notebook&_=1702359962082 (127.0.0.1): Unreadable Notebook: /scratch/user/zshuying/ppi_mutation/notebooks/investigate_seq_embeddings.ipynb NotJSONError('Notebook does not appear to be JSON: \'{\\n "cells": [\\n  {\\n   "attachments": ...')
+[W 23:46:02.554 NotebookApp] Unreadable Notebook: /scratch/user/zshuying/ppi_mutation/notebooks/investigate_seq_embeddings.ipynb NotJSONError('Notebook does not appear to be JSON: \'{\\n "cells": [\\n  {\\n   "attachments": ...')
+[W 23:46:02.554 NotebookApp] 400 GET /api/contents/notebooks/investigate_seq_embeddings.ipynb?type=notebook&_=1702359962082 (127.0.0.1) 157.940000ms referer=http://localhost:8888/notebooks/notebooks/investigate_seq_embeddings.ipynb
+[I 23:46:07.597 NotebookApp] 302 GET /notebooks (127.0.0.1) 1.680000ms
+[E 23:46:13.805 NotebookApp] Notebook JSON is invalid: Additional properties are not allowed ('outputs' was unexpected)
+    
+    Failed validating 'additionalProperties' in markdown_cell:
+    
+    On instance['cells'][8]:
+    {'cell_type': 'markdown',
+     'metadata': {'collapsed': False, 'pycharm': {'name': '#%% md\n'}},
+     'outputs': ['...1 outputs...'],
+     'source': 'get positive and negative statistics'}
+[W 23:46:13.932 NotebookApp] Notebook notebooks/clinvar.ipynb is not trusted
+[I 23:46:17.055 NotebookApp] Kernel started: 0ca653ab-e819-4865-b148-7cde9b5a4b08, name: conda-env-.conda-gnn-py
+[I 23:48:17.156 NotebookApp] Saving file at /notebooks/clinvar.ipynb
+[W 23:48:17.158 NotebookApp] Notebook notebooks/clinvar.ipynb is not trusted
+[I 23:50:16.886 NotebookApp] Saving file at /notebooks/clinvar.ipynb
+[W 23:50:16.888 NotebookApp] Notebook notebooks/clinvar.ipynb is not trusted
+[I 03:26:48.981 NotebookApp] Starting buffering for 0ca653ab-e819-4865-b148-7cde9b5a4b08:4d64376df79345ccae171f94a8e5b31d

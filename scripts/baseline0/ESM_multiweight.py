@@ -44,7 +44,7 @@ from scripts.baseline0.datasets import *
 import pandas as pd
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config_file', type=str, help='', default="b0_multiscale0_n_wild.yaml")
+parser.add_argument('--config_file', type=str, help='', default="b0_multiscale0.yaml")
 args = parser.parse_args()
 config = load_config(args.config_file)
 print(config)
@@ -64,12 +64,12 @@ if __name__ == '__main__':
     if config.get('test'):
         myesm = Esm_delta_multiscale_weight(
             esm_model=eval("esm.pretrained.%s()" % config['model_init']['esm_model_name']),
-            lr=config['data_init']['batch_size'] * config['num_devices'] * config['num_nodes'] * 1e-6,
+            lr=config['data_init']['batch_size'] * config['num_devices'] * config['num_nodes'] * config['lr_each'],
             **config['model_init']).load_from_checkpoint(config['ckpt'])
     else:
         myesm = Esm_delta_multiscale_weight(
             esm_model=eval("esm.pretrained.%s()" % config['model_init']['esm_model_name']),
-            lr=config['data_init']['batch_size'] * config['num_devices'] * config['num_nodes'] * 1e-6,
+            lr=config['data_init']['batch_size'] * config['num_devices'] * config['num_nodes'] * config['lr_each'],
             **config['model_init'])
 
     if config['num_devices'] > 1:

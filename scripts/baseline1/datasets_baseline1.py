@@ -118,11 +118,13 @@ class VariantPPI(Dataset):
 
 def all_uniprot(f_path=pj(top_path,'ppi_huri_humap.txt')):
     with open(f_path,'r') as f:
-        uniprots=eval(f.readline())
+        uniprots_ppi=eval(f.readline())
+    uniprots=set([pair.split('-')[0] for pair in uniprots_ppi]).union(set([pair.split('-')[0] for pair in uniprots_ppi]))
+    l_uniprots=list(uniprots)
     # uniprots=pd.read_csv(f_path)['UniProt'].unique().tolist()
-    dic_uniprot2idx=dict([(uniprots[i],i) for i in range(len(uniprots))])
-    dic_idx2uniprot=dict([(i,uniprots[i]) for i in range(len(uniprots))])
-    return uniprots, dic_uniprot2idx,dic_idx2uniprot
+    dic_uniprot2idx=dict([(l_uniprots[i],i) for i in range(len(l_uniprots))])
+    dic_idx2uniprot=dict([(i,l_uniprots[i]) for i in range(len(l_uniprots))])
+    return l_uniprots, dic_uniprot2idx,dic_idx2uniprot
 
 
 def split_train_val(dataset,train_val_split=0.8,random_seed=52):

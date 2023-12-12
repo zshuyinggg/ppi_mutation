@@ -9,7 +9,7 @@ data_init:
   variant_only: True
   write_list: True
   random_seed: 12
-  num_workers: 8
+  num_workers: 20
   batch_size: 20
 
 
@@ -23,8 +23,8 @@ callback_args:
   mode: min
 
 model_init:
-  num_bins: 7
-  bin_one_side_distance: [0, 1, 2, 4, 8, 64, 256]
+  num_bins: 8
+  bin_one_side_distance: [0, 2, 4, 8, 16, 32, 128, 256]
   repr_layers: 6
   unfreeze_n_layers: 6
   esm_model_name: esm2_t6_8M_UR50D
@@ -33,5 +33,5 @@ model_init:
 
 num_devices: 2
 num_nodes: 8
-lr_each: 0.00000001
+lr_each: 0.000001
 seed: 12
